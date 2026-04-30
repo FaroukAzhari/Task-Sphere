@@ -6,3 +6,9 @@
 !.env.example
 **/.env.example
 "@ | Set-Content .gitignore
+
+server/.env
+.env
+**/.env
+!.env.example
+**/.env.example
