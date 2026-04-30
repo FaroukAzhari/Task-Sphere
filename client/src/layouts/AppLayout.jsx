@@ -49,7 +49,7 @@ const AppLayout = ({ children }) => {
   return (
     <div className="min-h-screen px-4 py-5 md:px-8">
       <AuroraBackground />
-      <div className="mx-auto mb-3 flex max-w-7xl items-center justify-between">
+      <div className="mx-auto mb-4 flex w-full max-w-[96rem] items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="brand-logo-frame h-9 w-[7.5rem] md:h-10 md:w-32">
             <img src={taskSphereLogo} alt="Task Sphere logo" className="brand-logo-image" />
@@ -73,7 +73,7 @@ const AppLayout = ({ children }) => {
           </button>
         </div>
       </div>
-      <div className="mx-auto grid max-w-7xl gap-5 md:grid-cols-[250px_1fr]">
+      <div className="mx-auto grid w-full max-w-[96rem] gap-5 md:grid-cols-[17rem_1fr] xl:grid-cols-[18.5rem_1fr]">
         <motion.aside
           initial={{ opacity: 0, x: -12 }}
           animate={{ opacity: 1, x: 0 }}
