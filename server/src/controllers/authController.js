@@ -1,0 +1,59 @@
+const User = require("../models/User");
+const AppError = require("../utils/AppError");
+const asyncHandler = require("../utils/asyncHandler");
+const { sendSuccess } = require("../utils/response");
+const { signToken } = require("../utils/jwt");
+
+const register = asyncHandler(async (req, res) => {
+  const { name, email, password } = req.body;
+
+  const exists = await User.findOne({ email });
+  if (exists) {
+    throw new AppError("Email already exists", 409);
+  }
+
+  const user = await User.create({ name, email, password });
+  const token = signToken(user._id);
+
+  return sendSuccess(
+    res,
+    {
+      token,
+      user: user.toSafeObject(),
+    },
+    "User registered",
+    201
+  );
+});
+
+const login = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  const user = await User.findOne({ email });
+
+  if (!user || !(await user.comparePassword(password))) {
+    throw new AppError("Invalid credentials", 401);
+  }
+
+  user.lastLoginAt = new Date();
+  await user.save();
+
+  return sendSuccess(res, {
+    token: signToken(user._id),
+    user: user.toSafeObject(),
+  }, "Login successful");
+});
+
+const me = asyncHandler(async (req, res) => {
+  return sendSuccess(res, req.user, "Current user fetched");
+});
+
+const logout = asyncHandler(async (_req, res) => {
+  return sendSuccess(res, null, "Logout successful");
+});
+
+module.exports = {
+  register,
+  login,
+  me,
+  logout,
+};
