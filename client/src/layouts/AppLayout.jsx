@@ -6,6 +6,7 @@ import { io } from "socket.io-client";
 import useAuth from "../hooks/useAuth";
 import AuroraBackground from "../components/common/AuroraBackground";
 import { fetchNotificationsApi } from "../api/notificationApi";
+import FonAiChat from "../components/ai/FonAiChat";
 import taskSphereLogo from "../assets/task-sphere-logo.png";
 
 const links = [
@@ -144,6 +145,7 @@ const AppLayout = ({ children }) => {
           {children}
         </motion.main>
       </div>
+      <FonAiChat />
     </div>
   );
 };

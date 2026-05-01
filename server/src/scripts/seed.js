@@ -8,7 +8,7 @@ const Project = require("../models/Project");
 const Task = require("../models/Task");
 const TaskComment = require("../models/TaskComment");
 const Notification = require("../models/Notification");
-const { USER_ROLES, TASK_STATUS, TASK_PRIORITY, TASK_TYPE } = require("../constants/enums");
+const { USER_ROLES, TEAM_MEMBER_STATUS, TASK_STATUS, TASK_PRIORITY, TASK_TYPE } = require("../constants/enums");
 
 const pick = (arr, i) => arr[i % arr.length];
 
@@ -40,11 +40,11 @@ const seed = async () => {
     description: "University software engineering team",
     owner: admin._id,
     members: [
-      { user: admin._id, role: USER_ROLES.ADMIN, invitedBy: admin._id },
-      { user: pm._id, role: USER_ROLES.PROJECT_MANAGER, invitedBy: admin._id },
-      { user: memberA._id, role: USER_ROLES.TEAM_LEAD, invitedBy: pm._id },
-      { user: memberB._id, role: USER_ROLES.MEMBER, invitedBy: pm._id },
-      { user: viewer._id, role: USER_ROLES.VIEWER, invitedBy: pm._id },
+      { user: admin._id, role: USER_ROLES.ADMIN, invitedBy: admin._id, status: TEAM_MEMBER_STATUS.ACCEPTED, joinedAt: new Date(), respondedAt: new Date() },
+      { user: pm._id, role: USER_ROLES.PROJECT_MANAGER, invitedBy: admin._id, status: TEAM_MEMBER_STATUS.ACCEPTED, joinedAt: new Date(), respondedAt: new Date() },
+      { user: memberA._id, role: USER_ROLES.TEAM_LEAD, invitedBy: pm._id, status: TEAM_MEMBER_STATUS.ACCEPTED, joinedAt: new Date(), respondedAt: new Date() },
+      { user: memberB._id, role: USER_ROLES.MEMBER, invitedBy: pm._id, status: TEAM_MEMBER_STATUS.ACCEPTED, joinedAt: new Date(), respondedAt: new Date() },
+      { user: viewer._id, role: USER_ROLES.VIEWER, invitedBy: pm._id, status: TEAM_MEMBER_STATUS.ACCEPTED, joinedAt: new Date(), respondedAt: new Date() },
     ],
   });
 
@@ -53,7 +53,7 @@ const seed = async () => {
     name: "Task Sphere MVP",
     description: "Collaborative kanban platform",
     deadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-    members: team.members.map((m) => ({
+    members: team.members.filter((m) => m.status === TEAM_MEMBER_STATUS.ACCEPTED).map((m) => ({
       user: m.user,
       role: m.role,
       memberLabel:

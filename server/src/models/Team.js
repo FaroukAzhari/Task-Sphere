@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { USER_ROLES } = require("../constants/enums");
+const { USER_ROLES, TEAM_MEMBER_STATUS } = require("../constants/enums");
 
 const teamMemberSchema = new mongoose.Schema(
   {
@@ -10,7 +10,15 @@ const teamMemberSchema = new mongoose.Schema(
       default: USER_ROLES.MEMBER,
     },
     invitedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    joinedAt: { type: Date, default: Date.now },
+    status: {
+      type: String,
+      enum: Object.values(TEAM_MEMBER_STATUS),
+      default: TEAM_MEMBER_STATUS.ACCEPTED,
+      index: true,
+    },
+    invitedAt: { type: Date, default: Date.now },
+    joinedAt: Date,
+    respondedAt: Date,
   },
   { _id: false }
 );

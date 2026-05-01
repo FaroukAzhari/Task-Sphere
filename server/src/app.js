@@ -10,6 +10,7 @@ const projectRoutes = require("./routes/projectRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
+const aiRoutes = require("./routes/aiRoutes");
 const { sendSuccess } = require("./utils/response");
 
 const app = express();
@@ -32,6 +33,7 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

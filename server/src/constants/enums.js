@@ -6,6 +6,11 @@ const USER_ROLES = {
   VIEWER: "Viewer",
 };
 
+const TEAM_MEMBER_STATUS = {
+  PENDING: "pending",
+  ACCEPTED: "accepted",
+};
+
 const TASK_STATUS = {
   BACKLOG: "Backlog",
   TODO: "To Do",
@@ -29,6 +34,7 @@ const TASK_TYPE = {
 
 module.exports = {
   USER_ROLES,
+  TEAM_MEMBER_STATUS,
   TASK_STATUS,
   TASK_PRIORITY,
   TASK_TYPE,

@@ -384,6 +384,150 @@ textarea::placeholder {
   border-top: 1px solid var(--outline);
 }
 
+.fon-ai-launcher {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--outline));
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(239, 253, 250, 0.94));
+  box-shadow: 0 18px 40px rgba(15, 139, 141, 0.18);
+  padding: 0.8rem 1rem;
+  color: var(--text);
+}
+
+.fon-ai-launcher-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.35rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 60%, #60a5fa));
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.fon-ai-launcher-copy {
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.fon-ai-panel {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 5.5rem;
+  z-index: 35;
+  width: min(26rem, calc(100vw - 2rem));
+  border: 1px solid var(--card-border);
+  border-radius: 1.4rem;
+  background:
+    radial-gradient(circle at top right, rgba(20, 184, 166, 0.08), transparent 28%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(247, 252, 251, 0.96));
+  box-shadow: 0 28px 60px rgba(23, 32, 51, 0.16);
+  overflow: hidden;
+}
+
+.fon-ai-panel-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--outline);
+}
+
+.fon-ai-top-btn {
+  border: 1px solid var(--outline);
+  border-radius: 0.9rem;
+  background: transparent;
+  color: var(--text);
+  padding: 0.45rem 0.8rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.fon-ai-prompt-row {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.85rem 1rem 0;
+}
+
+.fon-ai-chip {
+  white-space: nowrap;
+  border: 1px solid var(--outline);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--text);
+  padding: 0.45rem 0.8rem;
+  font-size: 0.73rem;
+  font-weight: 700;
+}
+
+.fon-ai-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 24rem;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.fon-ai-message {
+  border-radius: 1.05rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--outline);
+}
+
+.fon-ai-message-user {
+  align-self: flex-end;
+  max-width: 85%;
+  background: linear-gradient(135deg, rgba(15, 139, 141, 0.14), rgba(103, 232, 249, 0.1));
+}
+
+.fon-ai-message-assistant {
+  align-self: flex-start;
+  max-width: 92%;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.fon-ai-message-role {
+  margin: 0 0 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.fon-ai-message-body {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.5;
+  font-size: 0.92rem;
+}
+
+.fon-ai-compose {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0 1rem 1rem;
+}
+
+.fon-ai-textarea {
+  width: 100%;
+  resize: none;
+  border-radius: 1rem;
+  padding: 0.9rem;
+}
+
 @media (min-width: 1280px) {
   .dashboard-hero-grid {
     grid-template-columns: minmax(0, 1.3fr) minmax(22rem, 0.7fr);
@@ -392,5 +536,36 @@ textarea::placeholder {
   .dashboard-hero-rail {
     border-top: 0;
     border-left: 1px solid var(--outline);
+  }
+}
+
+:root[data-theme="dark"] .fon-ai-launcher {
+  background: linear-gradient(140deg, rgba(17, 26, 45, 0.96), rgba(18, 35, 49, 0.94));
+  box-shadow: 0 22px 50px rgba(2, 8, 23, 0.45);
+}
+
+:root[data-theme="dark"] .fon-ai-panel {
+  background:
+    radial-gradient(circle at top right, rgba(20, 184, 166, 0.12), transparent 28%),
+    linear-gradient(160deg, rgba(17, 26, 45, 0.98), rgba(12, 20, 37, 0.96));
+}
+
+:root[data-theme="dark"] .fon-ai-message-assistant,
+:root[data-theme="dark"] .fon-ai-chip {
+  background: rgba(20, 30, 50, 0.88);
+}
+
+@media (max-width: 640px) {
+  .fon-ai-launcher {
+    right: 0.85rem;
+    bottom: 0.85rem;
+    padding: 0.7rem 0.85rem;
+  }
+
+  .fon-ai-panel {
+    right: 0.75rem;
+    left: 0.75rem;
+    bottom: 5rem;
+    width: auto;
   }
 }

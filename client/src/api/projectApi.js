@@ -4,6 +4,10 @@ export const fetchTeamsApi = async () => unwrap(await apiClient.get("/teams"));
 export const fetchTeamApi = async (teamId) => unwrap(await apiClient.get(`/teams/${teamId}`));
 export const createTeamApi = async (payload) => unwrap(await apiClient.post("/teams", payload));
 export const inviteTeamMemberApi = async ({ teamId, payload }) => unwrap(await apiClient.post(`/teams/${teamId}/invite`, payload));
+export const acceptTeamInvitationApi = async ({ teamId, userId }) =>
+  unwrap(await apiClient.post(`/teams/${teamId}/invitations/${userId}/accept`));
+export const declineTeamInvitationApi = async ({ teamId, userId }) =>
+  unwrap(await apiClient.post(`/teams/${teamId}/invitations/${userId}/decline`));
 export const updateTeamMemberRoleApi = async ({ teamId, memberUserId, role }) =>
   unwrap(await apiClient.patch(`/teams/${teamId}/members/${memberUserId}/role`, { role }));
 export const fetchProjectsApi = async (teamId) => unwrap(await apiClient.get("/projects", { params: { teamId } }));

@@ -7,6 +7,8 @@ const {
   listTeams,
   getTeamById,
   inviteMember,
+  acceptInvitation,
+  declineInvitation,
   updateTeamSettings,
   updateMemberRole,
 } = require("../controllers/teamController");
@@ -25,6 +27,8 @@ router.post(
   validate,
   inviteMember
 );
+router.post("/:teamId/invitations/:userId/accept", acceptInvitation);
+router.post("/:teamId/invitations/:userId/decline", declineInvitation);
 router.patch(
   "/:teamId/members/:memberUserId/role",
   [body("role").isIn(Object.values(USER_ROLES))],

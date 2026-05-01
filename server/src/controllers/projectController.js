@@ -4,7 +4,7 @@ const Task = require("../models/Task");
 const asyncHandler = require("../utils/asyncHandler");
 const { sendSuccess } = require("../utils/response");
 const AppError = require("../utils/AppError");
-const { canWriteProject, canManageTeam } = require("../services/accessService");
+const { canWriteProject, canManageTeam, isAcceptedTeamMember } = require("../services/accessService");
 const normalizeDayStart = (value) => {
   const day = new Date(value);
   day.setHours(0, 0, 0, 0);
@@ -18,12 +18,16 @@ const createProject = asyncHandler(async (req, res) => {
   if (!team) throw new AppError("Team not found", 404);
 
   const teamMember = team.members.find((m) => String(m.user) === String(req.user._id));
-  if (!teamMember || !canManageTeam(teamMember.role)) {
+  if (!teamMember || !isAcceptedTeamMember(teamMember) || !canManageTeam(teamMember.role)) {
     throw new AppError("Forbidden", 403);
   }
 
   const members = team.members
-    .filter((m) => memberIds.length === 0 || memberIds.includes(String(m.user)) || String(m.user) === String(req.user._id))
+    .filter(
+      (m) =>
+        isAcceptedTeamMember(m) &&
+        (memberIds.length === 0 || memberIds.includes(String(m.user)) || String(m.user) === String(req.user._id))
+    )
     .map((m) => ({ user: m.user, role: m.role }));
 
   if (deadline) {
@@ -109,7 +113,9 @@ const addProjectMember = asyncHandler(async (req, res) => {
   if (exists) throw new AppError("User is already in this project", 409);
 
   const team = await Team.findById(project.team).lean();
-  const inTeam = team.members.some((member) => String(member.user) === String(userId));
+  const inTeam = team.members.some(
+    (member) => String(member.user) === String(userId) && isAcceptedTeamMember(member)
+  );
   if (!inTeam) throw new AppError("User must belong to the project team", 400);
 
   project.members.push({ user: userId, role, memberLabel });

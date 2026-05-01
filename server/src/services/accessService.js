@@ -1,6 +1,6 @@
 const Team = require("../models/Team");
 const Project = require("../models/Project");
-const { USER_ROLES } = require("../constants/enums");
+const { USER_ROLES, TEAM_MEMBER_STATUS } = require("../constants/enums");
 
 const roleRank = {
   [USER_ROLES.ADMIN]: 4,
@@ -13,6 +13,8 @@ const roleRank = {
 const canManageTeam = (role) => roleRank[role] >= roleRank[USER_ROLES.PROJECT_MANAGER];
 const canWriteProject = (role) => roleRank[role] >= roleRank[USER_ROLES.MEMBER];
 const canManageTaskEditing = (role) => roleRank[role] >= roleRank[USER_ROLES.TEAM_LEAD];
+const isAcceptedTeamMember = (member) =>
+  Boolean(member) && member.status !== TEAM_MEMBER_STATUS.PENDING;
 const getEntityId = (value) => {
   if (!value) return "";
   if (typeof value === "string") return value;
@@ -26,7 +28,7 @@ const canEditTask = ({ role, userId, task }) =>
 const getTeamMembership = async (teamId, userId) => {
   const team = await Team.findById(teamId).lean();
   if (!team) return null;
-  const member = team.members.find((m) => String(m.user) === String(userId));
+  const member = team.members.find((m) => String(m.user) === String(userId) && isAcceptedTeamMember(m));
   return member ? { team, member } : null;
 };
 
@@ -44,5 +46,6 @@ module.exports = {
   canEditTask,
   getTeamMembership,
   getProjectMembership,
+  isAcceptedTeamMember,
   roleRank,
 };

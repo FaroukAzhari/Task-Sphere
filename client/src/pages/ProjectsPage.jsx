@@ -79,9 +79,10 @@ const ProjectsPage = () => {
     mutationFn: inviteTeamMemberApi,
     onSuccess: async () => {
       setInviteForm({ email: "", role: "Member" });
-      setToast({ type: "success", message: "Team member added." });
+      setToast({ type: "success", message: "Invitation sent." });
       await queryClient.invalidateQueries({ queryKey: ["team", selectedTeam] });
       await queryClient.invalidateQueries({ queryKey: ["projects", selectedTeam] });
+      await queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
     onError: (error) => setToast({ type: "error", message: error?.response?.data?.message || "Could not invite member." }),
   });
@@ -118,17 +119,46 @@ const ProjectsPage = () => {
   });
 
   const teams = teamsQuery.data || [];
+  const acceptedTeams = useMemo(
+    () => teams.filter((team) => (team.currentUserStatus || "accepted") === "accepted"),
+    [teams]
+  );
   const projects = projectsQuery.data || [];
   const teamMembers = selectedTeamQuery.data?.members || [];
+  const acceptedTeamMembers = useMemo(
+    () => teamMembers.filter((member) => (member.status || "accepted") === "accepted"),
+    [teamMembers]
+  );
+  const pendingTeamMembers = useMemo(
+    () => teamMembers.filter((member) => member.status === "pending"),
+    [teamMembers]
+  );
 
   useEffect(() => {
-    if (!selectedTeam && teams.length > 0) setSelectedTeam(teams[0]._id);
-  }, [teams, selectedTeam]);
+    if (acceptedTeams.length === 0) {
+      setSelectedTeam("");
+      return;
+    }
+
+    const selectedStillAccepted = acceptedTeams.some((team) => team._id === selectedTeam);
+    if (!selectedStillAccepted) {
+      setSelectedTeam(acceptedTeams[0]._id);
+    }
+  }, [acceptedTeams, selectedTeam]);
 
   useEffect(() => {
-    if (projects.length > 0) setSelectedProject((prev) => prev || projects[0]._id);
+    if (projects.length > 0) setSelectedProject((prev) => (projects.some((project) => project._id === prev) ? prev : projects[0]._id));
     else setSelectedProject("");
   }, [projects]);
+
+  useEffect(() => {
+    if (
+      projectMemberForm.userId &&
+      !acceptedTeamMembers.some((member) => String(member.user?._id || member.user) === String(projectMemberForm.userId))
+    ) {
+      setProjectMemberForm((prev) => ({ ...prev, userId: "" }));
+    }
+  }, [acceptedTeamMembers, projectMemberForm.userId]);
 
   const selectedProjectData = useMemo(() => projects.find((project) => project._id === selectedProject), [projects, selectedProject]);
   const todayISO = useMemo(() => new Date().toISOString().split("T")[0], []);
@@ -151,7 +181,7 @@ const ProjectsPage = () => {
           <h2 className="text-lg font-semibold">Create project</h2>
           <div className="mt-3 grid gap-2">
             <select className="rounded-xl border border-slate-300 px-3 py-2" value={selectedTeam} onChange={(e) => setSelectedTeam(e.target.value)}>
-              {teams.map((team) => <option key={team._id} value={team._id}>{team.name}</option>)}
+              {acceptedTeams.map((team) => <option key={team._id} value={team._id}>{team.name}</option>)}
             </select>
             <input className="rounded-xl border border-slate-300 px-3 py-2" placeholder="Project name" value={projectForm.name} onChange={(e) => setProjectForm((prev) => ({ ...prev, name: e.target.value }))} />
             <textarea className="rounded-xl border border-slate-300 px-3 py-2" placeholder="Description" value={projectForm.description} onChange={(e) => setProjectForm((prev) => ({ ...prev, description: e.target.value }))} />
@@ -169,6 +199,7 @@ const ProjectsPage = () => {
             >
               Create project
             </button>
+            {acceptedTeams.length === 0 ? <p className="text-xs text-slate-500">Join or create a team before creating projects.</p> : null}
           </div>
         </section>
       </div>
@@ -177,7 +208,14 @@ const ProjectsPage = () => {
         <section className="card p-4">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-lg font-semibold">Team member management</h2>
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">{teamMembers.length} members</span>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">{acceptedTeamMembers.length} active</span>
+              {pendingTeamMembers.length > 0 ? (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                  {pendingTeamMembers.length} pending
+                </span>
+              ) : null}
+            </div>
           </div>
           <p className="mt-1 text-xs text-slate-500">Only one <strong>Team Lead</strong> is allowed per team.</p>
 
@@ -189,8 +227,36 @@ const ProjectsPage = () => {
           </div>
           <button type="button" className="mt-2 rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white" onClick={() => inviteMemberMutation.mutate({ teamId: selectedTeam, payload: inviteForm })} disabled={!selectedTeam}>Add to team</button>
 
+          {pendingTeamMembers.length > 0 ? (
+            <div className="mt-4">
+              <p className="text-sm font-semibold">Pending invitations</p>
+              <div className="mt-2 space-y-2">
+                {pendingTeamMembers.map((member) => (
+                  <div key={member.user?._id || member.user} className="rounded-xl border border-amber-200 bg-amber-50/70 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-amber-300 bg-white text-[11px] font-semibold text-slate-700">
+                          {(member.user?.name || "U").slice(0, 1).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold">{member.user?.name || "Unknown"}</p>
+                          <p className="text-xs text-slate-500">{member.user?.email || "No email"}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="rounded-full bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-700">Pending</span>
+                        <p className="mt-1 text-xs text-slate-500">{member.role}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div className="mt-4 space-y-2">
-            {teamMembers.map((member) => (
+            <p className="text-sm font-semibold">Accepted members</p>
+            {acceptedTeamMembers.map((member) => (
               <div key={member.user?._id || member.user} className="rounded-xl border border-slate-200 p-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
@@ -220,7 +286,7 @@ const ProjectsPage = () => {
                 </div>
               </div>
             ))}
-            {teamMembers.length === 0 && <p className="text-sm text-slate-500">No members yet.</p>}
+            {acceptedTeamMembers.length === 0 && <p className="text-sm text-slate-500">No accepted members yet.</p>}
           </div>
         </section>
 
@@ -233,7 +299,7 @@ const ProjectsPage = () => {
             </select>
             <select className="rounded-xl border border-slate-300 px-3 py-2" value={projectMemberForm.userId} onChange={(e) => setProjectMemberForm((prev) => ({ ...prev, userId: e.target.value }))}>
               <option value="">Select team member</option>
-              {teamMembers.map((member) => <option key={member.user?._id || member.user} value={member.user?._id || member.user}>{member.user?.name || member.user}</option>)}
+              {acceptedTeamMembers.map((member) => <option key={member.user?._id || member.user} value={member.user?._id || member.user}>{member.user?.name || member.user}</option>)}
             </select>
             <select className="rounded-xl border border-slate-300 px-3 py-2" value={projectMemberForm.role} onChange={(e) => setProjectMemberForm((prev) => ({ ...prev, role: e.target.value }))}>
               {teamRoles.map((role) => <option key={role}>{role}</option>)}
@@ -241,6 +307,11 @@ const ProjectsPage = () => {
             <input className="rounded-xl border border-slate-300 px-3 py-2" placeholder="Member label (e.g. Backend, QA, UI)" value={projectMemberForm.memberLabel} onChange={(e) => setProjectMemberForm((prev) => ({ ...prev, memberLabel: e.target.value }))} />
             <button type="button" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white" disabled={!selectedProject || !projectMemberForm.userId} onClick={() => addProjectMemberMutation.mutate({ projectId: selectedProject, userId: projectMemberForm.userId, role: projectMemberForm.role, memberLabel: projectMemberForm.memberLabel })}>Add to project</button>
             {selectedProjectData && <p className="text-xs text-slate-500">Selected project: <span className="font-semibold text-slate-700">{selectedProjectData.name}</span></p>}
+            {pendingTeamMembers.length > 0 ? (
+              <p className="text-xs text-amber-700">
+                {pendingTeamMembers.length} pending invitation{pendingTeamMembers.length === 1 ? "" : "s"} must be accepted before project assignment.
+              </p>
+            ) : null}
           </div>
         </section>
       </div>
