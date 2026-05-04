@@ -46,6 +46,7 @@ const AppLayout = ({ children }) => {
   }, [theme]);
 
   const unreadCount = (notificationsQuery.data || []).filter((notification) => !notification.isRead).length;
+  const platformRoleLabel = user?.globalRole === "Admin" ? "Platform Admin" : "Platform Member";
 
   return (
     <div className="min-h-screen px-4 py-5 md:px-8">
@@ -123,7 +124,7 @@ const AppLayout = ({ children }) => {
               )}
               <div>
                 <p className="ds-text text-sm font-semibold">{user?.name}</p>
-                <p className="ds-muted text-xs">{user?.headline || user?.globalRole}</p>
+                <p className="ds-muted text-xs">{platformRoleLabel}</p>
               </div>
             </div>
             <div className="mt-2 h-1 rounded-full" style={{ backgroundColor: user?.accentColor || "var(--primary)" }} />

@@ -5,10 +5,9 @@ const asyncHandler = require("../utils/asyncHandler");
 const { sendSuccess } = require("../utils/response");
 const AppError = require("../utils/AppError");
 const { USER_ROLES, TEAM_MEMBER_STATUS } = require("../constants/enums");
-const { canManageTeam, roleRank, isAcceptedTeamMember } = require("../services/accessService");
+const { canManageTeam, isAcceptedTeamMember, getScopedRoleRank } = require("../services/accessService");
 const { createNotification } = require("../services/notificationService");
-
-const elevatedRoles = new Set([USER_ROLES.ADMIN]);
+const { TEAM_ASSIGNABLE_ROLES, normalizeScopedRole } = require("../services/roleScopeService");
 
 const findTeamMember = (team, userId) =>
   team.members.find((member) => String(member.user?._id || member.user) === String(userId));
@@ -19,6 +18,28 @@ const findAcceptedTeamMember = (team, userId) =>
       String(member.user?._id || member.user) === String(userId) &&
       isAcceptedTeamMember(member)
   );
+
+const canManageThisTeam = (team, actingMember, user) =>
+  String(team.owner?._id || team.owner) === String(user._id) ||
+  user.globalRole === USER_ROLES.ADMIN ||
+  (actingMember && canManageTeam(actingMember.role));
+
+const serializeTeam = (teamDoc, userId = null) => {
+  const team = typeof teamDoc.toObject === "function" ? teamDoc.toObject() : teamDoc;
+  team.members = (team.members || []).map((member) => ({
+    ...member,
+    role: normalizeScopedRole(member.role),
+  }));
+
+  if (userId) {
+    const currentMembership = team.members.find((member) => String(member.user?._id || member.user) === String(userId)) || null;
+    team.currentUserMembership = currentMembership;
+    team.currentUserRole = currentMembership?.role || null;
+    team.currentUserStatus = currentMembership?.status || TEAM_MEMBER_STATUS.ACCEPTED;
+  }
+
+  return team;
+};
 
 const ensureSingleTeamLead = (team, targetUserId = null) => {
   const existing = team.members.find(
@@ -33,20 +54,12 @@ const ensureSingleTeamLead = (team, targetUserId = null) => {
   }
 };
 
-const mapTeamForCurrentUser = (team, userId) => {
-  const currentMembership = team.members.find((member) => String(member.user) === String(userId)) || null;
-
-  return {
-    ...team,
-    currentUserMembership: currentMembership,
-    currentUserRole: currentMembership?.role || null,
-    currentUserStatus: currentMembership?.status || TEAM_MEMBER_STATUS.ACCEPTED,
-  };
-};
-
 const createTeam = asyncHandler(async (req, res) => {
-  const { name, description } = req.body;
+  const { name, description, creatorRole } = req.body;
   const now = new Date();
+  const initialRole = TEAM_ASSIGNABLE_ROLES.includes(creatorRole)
+    ? creatorRole
+    : USER_ROLES.PROJECT_MANAGER;
 
   const team = await Team.create({
     name,
@@ -55,7 +68,7 @@ const createTeam = asyncHandler(async (req, res) => {
     members: [
       {
         user: req.user._id,
-        role: USER_ROLES.ADMIN,
+        role: initialRole,
         invitedBy: req.user._id,
         status: TEAM_MEMBER_STATUS.ACCEPTED,
         invitedAt: now,
@@ -65,7 +78,7 @@ const createTeam = asyncHandler(async (req, res) => {
     ],
   });
 
-  return sendSuccess(res, team, "Team created", 201);
+  return sendSuccess(res, serializeTeam(team, req.user._id), "Team created", 201);
 });
 
 const listTeams = asyncHandler(async (req, res) => {
@@ -74,7 +87,7 @@ const listTeams = asyncHandler(async (req, res) => {
     .sort({ createdAt: -1 })
     .lean();
 
-  return sendSuccess(res, teams.map((team) => mapTeamForCurrentUser(team, req.user._id)), "Teams fetched");
+  return sendSuccess(res, teams.map((team) => serializeTeam(team, req.user._id)), "Teams fetched");
 });
 
 const getTeamById = asyncHandler(async (req, res) => {
@@ -88,7 +101,7 @@ const getTeamById = asyncHandler(async (req, res) => {
   const actingMember = findTeamMember(team, req.user._id);
   if (!actingMember) throw new AppError("Forbidden", 403);
 
-  return sendSuccess(res, team, "Team fetched");
+  return sendSuccess(res, serializeTeam(team, req.user._id), "Team fetched");
 });
 
 const inviteMember = asyncHandler(async (req, res) => {
@@ -99,14 +112,14 @@ const inviteMember = asyncHandler(async (req, res) => {
   if (!team) throw new AppError("Team not found", 404);
 
   const actingMember = findAcceptedTeamMember(team, req.user._id);
-  if (!actingMember || !canManageTeam(actingMember.role)) {
+  if (!actingMember || !canManageThisTeam(team, actingMember, req.user)) {
     throw new AppError("Forbidden", 403);
   }
-  if (elevatedRoles.has(role) && actingMember.role !== USER_ROLES.ADMIN) {
-    throw new AppError("Only admins can assign admin role", 403);
+  if (!TEAM_ASSIGNABLE_ROLES.includes(role || USER_ROLES.MEMBER)) {
+    throw new AppError("Invalid team role", 400);
   }
 
-  const assignedRole = role || USER_ROLES.MEMBER;
+  const assignedRole = normalizeScopedRole(role || USER_ROLES.MEMBER);
   if (assignedRole === USER_ROLES.TEAM_LEAD) {
     ensureSingleTeamLead(team);
   }
@@ -157,7 +170,7 @@ const inviteMember = asyncHandler(async (req, res) => {
   });
 
   const populated = await Team.findById(teamId).populate("members.user", "name email avatarUrl");
-  return sendSuccess(res, populated, "Invitation sent");
+  return sendSuccess(res, serializeTeam(populated, req.user._id), "Invitation sent");
 });
 
 const acceptInvitation = asyncHandler(async (req, res) => {
@@ -216,7 +229,7 @@ const acceptInvitation = asyncHandler(async (req, res) => {
   }
 
   const populated = await Team.findById(teamId).populate("members.user", "name email avatarUrl");
-  return sendSuccess(res, populated, "Invitation accepted");
+  return sendSuccess(res, serializeTeam(populated, req.user._id), "Invitation accepted");
 });
 
 const declineInvitation = asyncHandler(async (req, res) => {
@@ -251,7 +264,7 @@ const declineInvitation = asyncHandler(async (req, res) => {
   );
 
   const populated = await Team.findById(teamId).populate("members.user", "name email avatarUrl");
-  return sendSuccess(res, populated, "Invitation declined");
+  return sendSuccess(res, serializeTeam(populated, req.user._id), "Invitation declined");
 });
 
 const updateTeamSettings = asyncHandler(async (req, res) => {
@@ -260,7 +273,7 @@ const updateTeamSettings = asyncHandler(async (req, res) => {
   if (!team) throw new AppError("Team not found", 404);
 
   const actingMember = findAcceptedTeamMember(team, req.user._id);
-  if (!actingMember || !canManageTeam(actingMember.role)) {
+  if (!actingMember || !canManageThisTeam(team, actingMember, req.user)) {
     throw new AppError("Forbidden", 403);
   }
 
@@ -274,7 +287,7 @@ const updateTeamSettings = asyncHandler(async (req, res) => {
   }
 
   await team.save();
-  return sendSuccess(res, team, "Team updated");
+  return sendSuccess(res, serializeTeam(team, req.user._id), "Team updated");
 });
 
 const updateMemberRole = asyncHandler(async (req, res) => {
@@ -285,25 +298,25 @@ const updateMemberRole = asyncHandler(async (req, res) => {
   if (!team) throw new AppError("Team not found", 404);
 
   const actingMember = findAcceptedTeamMember(team, req.user._id);
-  if (!actingMember || !canManageTeam(actingMember.role)) throw new AppError("Forbidden", 403);
-  if (elevatedRoles.has(role) && actingMember.role !== USER_ROLES.ADMIN) {
-    throw new AppError("Only admins can assign admin role", 403);
+  if (!actingMember || !canManageThisTeam(team, actingMember, req.user)) throw new AppError("Forbidden", 403);
+  if (!TEAM_ASSIGNABLE_ROLES.includes(role)) {
+    throw new AppError("Invalid team role", 400);
   }
-  if (role === USER_ROLES.TEAM_LEAD) {
+  if (normalizeScopedRole(role) === USER_ROLES.TEAM_LEAD) {
     ensureSingleTeamLead(team, memberUserId);
   }
 
   const member = findTeamMember(team, memberUserId);
   if (!member || !isAcceptedTeamMember(member)) throw new AppError("Accepted team member not found", 404);
-  if (String(memberUserId) === String(req.user._id) && (roleRank[role] || 0) < (roleRank[member.role] || 0)) {
+  if (String(memberUserId) === String(req.user._id) && getScopedRoleRank(role) < getScopedRoleRank(member.role)) {
     throw new AppError("You cannot change your own role to a lower hierarchy", 400);
   }
 
-  member.role = role;
+  member.role = normalizeScopedRole(role);
   await team.save();
 
   const populated = await Team.findById(teamId).populate("members.user", "name email avatarUrl");
-  return sendSuccess(res, populated, "Member role updated");
+  return sendSuccess(res, serializeTeam(populated, req.user._id), "Member role updated");
 });
 
 module.exports = {

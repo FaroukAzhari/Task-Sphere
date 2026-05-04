@@ -20,7 +20,6 @@ import Toast from "../components/common/Toast";
 
 const teamRoles = ["Project Manager", "Team Lead", "Member", "Viewer"];
 const roleRank = {
-  Admin: 4,
   "Project Manager": 3,
   "Team Lead": 2.5,
   Member: 2,
@@ -35,7 +34,7 @@ const ProjectsPage = () => {
   const [toast, setToast] = useState({ type: "info", message: "" });
   const [inviteForm, setInviteForm] = useState({ email: "", role: "Member" });
   const [projectMemberForm, setProjectMemberForm] = useState({ userId: "", role: "Member", memberLabel: "" });
-  const [teamForm, setTeamForm] = useState({ name: "", description: "" });
+  const [teamForm, setTeamForm] = useState({ name: "", description: "", creatorRole: "Project Manager" });
   const [projectForm, setProjectForm] = useState({ name: "", description: "", deadline: "" });
 
   const teamsQuery = useQuery({ queryKey: ["teams"], queryFn: fetchTeamsApi });
@@ -57,10 +56,15 @@ const ProjectsPage = () => {
 
   const createTeamMutation = useMutation({
     mutationFn: createTeamApi,
-    onSuccess: async () => {
-      setTeamForm({ name: "", description: "" });
+    onSuccess: async (createdTeam) => {
+      setTeamForm({ name: "", description: "", creatorRole: "Project Manager" });
+      setSelectedTeam(createdTeam._id);
+      setSelectedProject("");
+      setProjectMemberForm({ userId: "", role: "Member", memberLabel: "" });
       setToast({ type: "success", message: "Team created." });
       await queryClient.invalidateQueries({ queryKey: ["teams"] });
+      await queryClient.invalidateQueries({ queryKey: ["team", createdTeam._id] });
+      await queryClient.invalidateQueries({ queryKey: ["projects", createdTeam._id] });
     },
     onError: (error) => setToast({ type: "error", message: error?.response?.data?.message || "Could not create team." }),
   });
@@ -162,6 +166,7 @@ const ProjectsPage = () => {
 
   const selectedProjectData = useMemo(() => projects.find((project) => project._id === selectedProject), [projects, selectedProject]);
   const todayISO = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const teamOwnerId = selectedTeamQuery.data?.owner?._id || selectedTeamQuery.data?.owner;
 
   if (teamsQuery.isLoading) return <LoadingState label="Loading teams" />;
 
@@ -173,6 +178,10 @@ const ProjectsPage = () => {
           <div className="mt-3 grid gap-2">
             <input className="rounded-xl border border-slate-300 px-3 py-2" placeholder="Team name" value={teamForm.name} onChange={(e) => setTeamForm((prev) => ({ ...prev, name: e.target.value }))} />
             <textarea className="rounded-xl border border-slate-300 px-3 py-2" placeholder="Description" value={teamForm.description} onChange={(e) => setTeamForm((prev) => ({ ...prev, description: e.target.value }))} />
+            <select className="rounded-xl border border-slate-300 px-3 py-2" value={teamForm.creatorRole} onChange={(e) => setTeamForm((prev) => ({ ...prev, creatorRole: e.target.value }))}>
+              {teamRoles.map((role) => <option key={role}>{role}</option>)}
+            </select>
+           
             <button type="button" onClick={() => createTeamMutation.mutate(teamForm)} className="rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white">Create team</button>
           </div>
         </section>
@@ -209,7 +218,7 @@ const ProjectsPage = () => {
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-lg font-semibold">Team member management</h2>
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">{acceptedTeamMembers.length} active</span>
+              <span className="settings-pill rounded-full px-2 py-0.5 text-xs">{acceptedTeamMembers.length} active</span>
               {pendingTeamMembers.length > 0 ? (
                 <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
                   {pendingTeamMembers.length} pending
@@ -269,11 +278,14 @@ const ProjectsPage = () => {
                     )}
                     <div>
                       <p className="text-sm font-semibold">{member.user?.name || "Unknown"}</p>
-                      <p className="text-xs text-slate-500">{member.user?.email || "No email"}</p>
+                      <p className="text-xs text-slate-500">
+                        {member.user?.email || "No email"}
+                        {String(member.user?._id || member.user) === String(teamOwnerId) ? " | Team owner" : ""}
+                      </p>
                     </div>
                   </div>
                   <select className="rounded-lg border border-slate-300 px-2 py-1 text-xs" value={member.role} onChange={(e) => updateRoleMutation.mutate({ teamId: selectedTeam, memberUserId: member.user?._id || member.user, role: e.target.value })}>
-                    {["Admin", "Project Manager", "Team Lead", "Member", "Viewer"].map((role) => {
+                    {teamRoles.map((role) => {
                       const isSelf = String(member.user?._id || member.user) === String(user?._id);
                       const blockedSelfDemotion = isSelf && (roleRank[role] || 0) < (roleRank[member.role] || 0);
                       return (
@@ -356,9 +368,9 @@ const ProjectsPage = () => {
         {projects.length > 0 && (
           <div className="mt-3 grid gap-2">
             {projects.map((project) => (
-              <Link key={project._id} to={`/projects/${project._id}`} className="rounded-xl border border-slate-200 bg-gradient-to-r from-white to-teal-50 p-3 transition hover:border-teal-500">
-                <p className="font-semibold">{project.name}</p>
-                <p className="text-sm text-slate-500">{project.description || "No description"}</p>
+              <Link key={project._id} to={`/projects/${project._id}`} className="project-list-card rounded-xl p-3 transition hover:border-teal-500">
+                <p className="ds-text font-semibold">{project.name}</p>
+                <p className="ds-muted text-sm">{project.description || "No description"}</p>
               </Link>
             ))}
           </div>

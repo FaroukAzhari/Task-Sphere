@@ -12,7 +12,7 @@ const {
   updateTeamSettings,
   updateMemberRole,
 } = require("../controllers/teamController");
-const { USER_ROLES } = require("../constants/enums");
+const { TEAM_ASSIGNABLE_ROLES } = require("../services/roleScopeService");
 
 const router = express.Router();
 
@@ -20,10 +20,15 @@ router.use(protect);
 
 router.get("/", listTeams);
 router.get("/:teamId", getTeamById);
-router.post("/", [body("name").trim().notEmpty()], validate, createTeam);
+router.post(
+  "/",
+  [body("name").trim().notEmpty(), body("creatorRole").optional().isIn(TEAM_ASSIGNABLE_ROLES)],
+  validate,
+  createTeam
+);
 router.post(
   "/:teamId/invite",
-  [body("email").isEmail(), body("role").optional().isIn(Object.values(USER_ROLES))],
+  [body("email").isEmail(), body("role").optional().isIn(TEAM_ASSIGNABLE_ROLES)],
   validate,
   inviteMember
 );
@@ -31,7 +36,7 @@ router.post("/:teamId/invitations/:userId/accept", acceptInvitation);
 router.post("/:teamId/invitations/:userId/decline", declineInvitation);
 router.patch(
   "/:teamId/members/:memberUserId/role",
-  [body("role").isIn(Object.values(USER_ROLES))],
+  [body("role").isIn(TEAM_ASSIGNABLE_ROLES)],
   validate,
   updateMemberRole
 );

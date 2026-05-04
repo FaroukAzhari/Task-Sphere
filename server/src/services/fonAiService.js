@@ -9,8 +9,10 @@ Task Sphere is a collaborative project and task management platform for student 
 
 Core platform concepts:
 - Roles: Admin, Project Manager, Team Lead, Member, Viewer.
-- Team creator becomes team-scoped Admin for that team.
-- New user accounts are global Member by default.
+- There is only one platform-level Admin account.
+- New user accounts are global Member by default unless their email matches the hardcoded platform admin email.
+- Team and project roles are scoped locally; normal team members are assigned Project Manager, Team Lead, Member, or Viewer inside a team.
+- Team creators choose their initial team role when creating a team.
 - Team invitations are pending until accepted.
 - Only accepted team members can be added to projects.
 - Project Manager and Team Lead can manage tasks broadly and run sprints.

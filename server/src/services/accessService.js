@@ -1,6 +1,7 @@
 const Team = require("../models/Team");
 const Project = require("../models/Project");
 const { USER_ROLES, TEAM_MEMBER_STATUS } = require("../constants/enums");
+const { normalizeScopedRole } = require("./roleScopeService");
 
 const roleRank = {
   [USER_ROLES.ADMIN]: 4,
@@ -10,9 +11,10 @@ const roleRank = {
   [USER_ROLES.VIEWER]: 1,
 };
 
-const canManageTeam = (role) => roleRank[role] >= roleRank[USER_ROLES.PROJECT_MANAGER];
-const canWriteProject = (role) => roleRank[role] >= roleRank[USER_ROLES.MEMBER];
-const canManageTaskEditing = (role) => roleRank[role] >= roleRank[USER_ROLES.TEAM_LEAD];
+const getScopedRoleRank = (role) => roleRank[normalizeScopedRole(role)] || 0;
+const canManageTeam = (role) => getScopedRoleRank(role) >= roleRank[USER_ROLES.PROJECT_MANAGER];
+const canWriteProject = (role) => getScopedRoleRank(role) >= roleRank[USER_ROLES.MEMBER];
+const canManageTaskEditing = (role) => getScopedRoleRank(role) >= roleRank[USER_ROLES.TEAM_LEAD];
 const isAcceptedTeamMember = (member) =>
   Boolean(member) && member.status !== TEAM_MEMBER_STATUS.PENDING;
 const getEntityId = (value) => {
@@ -48,4 +50,5 @@ module.exports = {
   getProjectMembership,
   isAcceptedTeamMember,
   roleRank,
+  getScopedRoleRank,
 };

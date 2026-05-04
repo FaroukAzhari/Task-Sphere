@@ -339,6 +339,131 @@ textarea::placeholder {
     linear-gradient(160deg, rgba(255, 255, 255, 0.86), rgba(248, 251, 252, 0.92));
 }
 
+.landing-hero-shell {
+  background:
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.12), transparent 24%),
+    radial-gradient(circle at 72% 62%, rgba(20, 184, 166, 0.12), transparent 20%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(249, 252, 253, 0.96));
+}
+
+.landing-showcase {
+  display: grid;
+  gap: 2rem;
+  align-items: center;
+}
+
+.landing-gradient-copy {
+  background: linear-gradient(90deg, #22d3ee, #2dd4bf 48%, #60a5fa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.landing-stat-row {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.landing-stat-card {
+  border: 1px solid var(--outline);
+  border-radius: 1.2rem;
+  padding: 1rem 1.1rem;
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+}
+
+.landing-command-stage {
+  position: relative;
+  min-height: 26rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.landing-glow-ring {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(18px);
+  opacity: 0.7;
+}
+
+.landing-glow-ring-a {
+  width: 12rem;
+  height: 12rem;
+  top: 1rem;
+  right: 2rem;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.42), transparent 65%);
+}
+
+.landing-glow-ring-b {
+  width: 15rem;
+  height: 15rem;
+  bottom: 1rem;
+  left: 1rem;
+  background: radial-gradient(circle, rgba(45, 212, 191, 0.38), transparent 68%);
+}
+
+.landing-command-card {
+  position: relative;
+  z-index: 1;
+  width: min(30rem, 100%);
+  border: 1px solid var(--outline);
+  border-radius: 1.8rem;
+  padding: 1.25rem;
+  background:
+    linear-gradient(155deg, rgba(255, 255, 255, 0.92), rgba(243, 251, 252, 0.92));
+  box-shadow: 0 28px 70px rgba(23, 32, 51, 0.14);
+}
+
+.landing-command-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.landing-command-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-top: 1.25rem;
+}
+
+.landing-mini-panel {
+  border: 1px solid var(--outline);
+  border-radius: 1.3rem;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+}
+
+.landing-mini-panel-wide {
+  grid-column: 1 / -1;
+}
+
+.landing-command-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--primary) 32%, var(--outline));
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  color: var(--text);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.landing-roadline {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.landing-roadline span {
+  height: 0.55rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(45, 212, 191, 0.5), rgba(96, 165, 250, 0.66));
+}
+
 .workflow-step {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -370,6 +495,37 @@ textarea::placeholder {
   letter-spacing: 0.12em;
 }
 
+.workspace-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.workspace-tab,
+.workspace-filter-pill {
+  border: 1px solid var(--outline);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  color: var(--text);
+  padding: 0.55rem 0.95rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  transition: background 160ms ease, transform 160ms ease, border-color 160ms ease;
+}
+
+.workspace-tab:hover,
+.workspace-filter-pill:hover {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--soft-surface) 92%, transparent);
+}
+
+.workspace-tab-active,
+.workspace-filter-pill-active {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 92%, #0f172a 8%), color-mix(in srgb, var(--primary) 65%, #67e8f9 35%));
+  border-color: color-mix(in srgb, var(--primary) 72%, transparent);
+  color: white;
+}
+
 .dashboard-hero-grid {
   display: grid;
   gap: 0;
@@ -382,6 +538,280 @@ textarea::placeholder {
 .dashboard-hero-rail {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(250, 248, 238, 0.92));
   border-top: 1px solid var(--outline);
+}
+
+.dashboard-chip {
+  border: 1px solid color-mix(in srgb, var(--surface) 68%, var(--outline));
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  color: var(--text);
+  box-shadow: 0 8px 18px rgba(23, 32, 51, 0.08);
+}
+
+.dashboard-panel {
+  border: 1px solid color-mix(in srgb, var(--surface) 50%, var(--outline));
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+}
+
+.dashboard-subpanel {
+  border: 1px solid var(--outline);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+
+.dashboard-pill {
+  background: color-mix(in srgb, var(--soft-surface) 88%, var(--surface));
+  color: var(--muted);
+}
+
+.dashboard-summary-callout,
+.dashboard-summary-panel,
+.dashboard-summary-item {
+  border: 1px solid var(--outline);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+}
+
+.settings-panel {
+  border: 1px solid var(--outline);
+  background: color-mix(in srgb, var(--soft-surface) 72%, transparent);
+}
+
+.settings-toggle {
+  border: 1px solid var(--outline);
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+}
+
+.settings-pill {
+  border: 1px solid var(--outline);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--text);
+}
+
+.settings-preview-card {
+  border: 1px solid var(--outline);
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--soft-surface) 84%, transparent));
+}
+
+.settings-preview-avatar {
+  color: var(--text);
+}
+
+.settings-preview-muted {
+  color: var(--muted);
+}
+
+.settings-preview-bio {
+  border: 1px solid var(--outline);
+  background: color-mix(in srgb, var(--surface) 76%, transparent);
+  color: var(--text);
+}
+
+.personal-console-shell {
+  background:
+    radial-gradient(circle at top right, rgba(34, 211, 238, 0.08), transparent 24%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 252, 0.96));
+}
+
+.personal-console-head {
+  border-bottom: 1px solid var(--outline);
+}
+
+.personal-console-callout,
+.personal-console-stat,
+.personal-console-item,
+.roadmap-chip,
+.roadmap-card,
+.roadmap-watch-item,
+.roadmap-empty {
+  border: 1px solid var(--outline);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+}
+
+.personal-console-grid {
+  display: grid;
+  background: var(--outline);
+}
+
+.personal-console-column {
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+
+.roadmap-shell {
+  background:
+    radial-gradient(circle at top right, rgba(45, 212, 191, 0.08), transparent 22%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 252, 0.96));
+}
+
+.roadmap-head {
+  border-bottom: 1px solid var(--outline);
+}
+
+.roadmap-grid {
+  display: grid;
+  background: var(--outline);
+}
+
+.roadmap-track,
+.roadmap-side {
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+}
+
+.roadmap-scroll {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(16rem, 1fr);
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+}
+
+.roadmap-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.18), rgba(45, 212, 191, 0.18));
+  color: var(--text);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.hub-composer,
+.hub-entry,
+.hub-empty,
+.gantt-shell,
+.gantt-head,
+.gantt-board,
+.gantt-empty {
+  border: 1px solid var(--outline);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+}
+
+.hub-entry-pinned {
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--outline));
+  background:
+    radial-gradient(circle at top right, rgba(45, 212, 191, 0.08), transparent 30%),
+    color-mix(in srgb, var(--surface) 88%, transparent);
+}
+
+.hub-danger-btn {
+  border: 1px solid color-mix(in srgb, #e11d48 40%, var(--outline));
+  background: color-mix(in srgb, #ffe4e6 80%, transparent);
+  color: #be123c;
+}
+
+.gantt-shell {
+  overflow: hidden;
+  border-radius: 1.5rem;
+}
+
+.gantt-head {
+  border-bottom: 1px solid var(--outline);
+}
+
+.gantt-board {
+  overflow-x: auto;
+}
+
+.gantt-table {
+  display: grid;
+  gap: 1rem;
+  min-width: min(100%, 90rem);
+}
+
+.gantt-header-row,
+.gantt-row {
+  display: grid;
+  grid-template-columns: minmax(16rem, 0.95fr) minmax(36rem, 2.05fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.gantt-meta-head {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 0;
+}
+
+.gantt-grid-head,
+.gantt-grid-row {
+  position: relative;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.gantt-date-head {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.gantt-row-meta {
+  border: 1px solid var(--outline);
+  border-radius: 1.15rem;
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  padding: 1rem;
+}
+
+.gantt-grid-cell {
+  min-height: 4.6rem;
+  border: 1px dashed color-mix(in srgb, var(--outline) 90%, transparent);
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--soft-surface) 72%, transparent);
+}
+
+.gantt-bar {
+  position: absolute;
+  top: 0.8rem;
+  bottom: 0.8rem;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.85rem;
+  padding: 0 0.7rem;
+  background: linear-gradient(135deg, rgba(15, 139, 141, 0.88), rgba(103, 232, 249, 0.72));
+  color: white;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 10px 22px rgba(15, 139, 141, 0.18);
+}
+
+.gantt-bar-blocked {
+  background: linear-gradient(135deg, rgba(225, 29, 72, 0.9), rgba(251, 113, 133, 0.76));
+}
+
+.gantt-bar-overdue {
+  background: linear-gradient(135deg, rgba(217, 119, 6, 0.92), rgba(251, 191, 36, 0.76));
+}
+
+.project-list-card {
+  border: 1px solid var(--outline);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--surface) 90%, transparent), color-mix(in srgb, var(--soft-surface) 84%, transparent));
+}
+
+.notification-action-btn {
+  border: 1px solid var(--outline);
+  background: color-mix(in srgb, var(--surface) 74%, transparent);
+  color: var(--text);
+}
+
+.notification-card {
+  border: 1px solid var(--outline);
+}
+
+.notification-card-read {
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+
+.notification-card-unread {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--outline));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--soft-surface) 88%, transparent), color-mix(in srgb, var(--surface) 92%, transparent));
 }
 
 .fon-ai-launcher {
@@ -537,6 +967,22 @@ textarea::placeholder {
     border-top: 0;
     border-left: 1px solid var(--outline);
   }
+
+  .landing-showcase {
+    grid-template-columns: minmax(0, 1.06fr) minmax(25rem, 0.94fr);
+  }
+
+  .landing-stat-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .personal-console-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .roadmap-grid {
+    grid-template-columns: minmax(0, 1.18fr) minmax(20rem, 0.82fr);
+  }
 }
 
 :root[data-theme="dark"] .fon-ai-launcher {
@@ -555,6 +1001,74 @@ textarea::placeholder {
   background: rgba(20, 30, 50, 0.88);
 }
 
+:root[data-theme="dark"] .dashboard-hero-main {
+  background: linear-gradient(135deg, rgba(13, 33, 46, 0.95), rgba(12, 22, 39, 0.96) 52%, rgba(46, 36, 12, 0.82));
+}
+
+:root[data-theme="dark"] .dashboard-hero-rail {
+  background: linear-gradient(180deg, rgba(15, 24, 42, 0.94), rgba(17, 26, 45, 0.92));
+}
+
+:root[data-theme="dark"] .landing-hero-shell,
+:root[data-theme="dark"] .landing-command-card,
+:root[data-theme="dark"] .personal-console-shell,
+:root[data-theme="dark"] .roadmap-shell {
+  background:
+    radial-gradient(circle at top right, rgba(34, 211, 238, 0.1), transparent 24%),
+    linear-gradient(160deg, rgba(17, 26, 45, 0.98), rgba(12, 20, 37, 0.96));
+}
+
+:root[data-theme="dark"] .dashboard-chip,
+:root[data-theme="dark"] .dashboard-panel,
+:root[data-theme="dark"] .dashboard-subpanel,
+:root[data-theme="dark"] .dashboard-summary-callout,
+:root[data-theme="dark"] .dashboard-summary-panel,
+:root[data-theme="dark"] .dashboard-summary-item,
+:root[data-theme="dark"] .settings-panel,
+:root[data-theme="dark"] .settings-toggle,
+:root[data-theme="dark"] .settings-pill,
+:root[data-theme="dark"] .settings-preview-card,
+:root[data-theme="dark"] .settings-preview-bio,
+:root[data-theme="dark"] .project-list-card,
+:root[data-theme="dark"] .notification-action-btn,
+:root[data-theme="dark"] .notification-card,
+:root[data-theme="dark"] .notification-card-read,
+:root[data-theme="dark"] .notification-card-unread,
+:root[data-theme="dark"] .landing-stat-card,
+:root[data-theme="dark"] .landing-mini-panel,
+:root[data-theme="dark"] .landing-command-pill,
+:root[data-theme="dark"] .personal-console-callout,
+:root[data-theme="dark"] .personal-console-stat,
+:root[data-theme="dark"] .personal-console-column,
+:root[data-theme="dark"] .personal-console-item,
+:root[data-theme="dark"] .roadmap-chip,
+:root[data-theme="dark"] .roadmap-track,
+:root[data-theme="dark"] .roadmap-side,
+:root[data-theme="dark"] .roadmap-card,
+:root[data-theme="dark"] .roadmap-watch-item,
+:root[data-theme="dark"] .roadmap-empty,
+:root[data-theme="dark"] .hub-composer,
+:root[data-theme="dark"] .hub-entry,
+:root[data-theme="dark"] .hub-empty,
+:root[data-theme="dark"] .gantt-shell,
+:root[data-theme="dark"] .gantt-head,
+:root[data-theme="dark"] .gantt-board,
+:root[data-theme="dark"] .gantt-empty,
+:root[data-theme="dark"] .gantt-row-meta,
+:root[data-theme="dark"] .workspace-tab,
+:root[data-theme="dark"] .workspace-filter-pill {
+  box-shadow: none;
+}
+
+:root[data-theme="dark"] .hub-danger-btn {
+  background: rgba(76, 5, 25, 0.42);
+  color: #fda4af;
+}
+
+:root[data-theme="dark"] .gantt-grid-cell {
+  background: rgba(20, 30, 50, 0.74);
+}
+
 @media (max-width: 640px) {
   .fon-ai-launcher {
     right: 0.85rem;
@@ -567,5 +1081,14 @@ textarea::placeholder {
     left: 0.75rem;
     bottom: 5rem;
     width: auto;
+  }
+
+  .landing-command-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .gantt-header-row,
+  .gantt-row {
+    grid-template-columns: 1fr;
   }
 }

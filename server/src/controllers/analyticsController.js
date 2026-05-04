@@ -8,6 +8,16 @@ const AppError = require("../utils/AppError");
 const { TASK_STATUS } = require("../constants/enums");
 const { computeWorkload } = require("../services/taskIntelligenceService");
 
+const priorityValue = (priority) => {
+  const map = { Low: 1, Medium: 2, High: 3, Critical: 4 };
+  return map[priority] || 1;
+};
+
+const taskDateValue = (value) => {
+  if (!value) return Number.MAX_SAFE_INTEGER;
+  return new Date(value).getTime();
+};
+
 const getDashboardAnalytics = asyncHandler(async (req, res) => {
   const { teamId, projectId } = req.query;
 
@@ -19,6 +29,7 @@ const getDashboardAnalytics = asyncHandler(async (req, res) => {
   if (!projects.length) throw new AppError("No projects found for user", 404);
 
   const projectIds = projects.map((p) => p._id);
+  const projectNameMap = new Map(projects.map((project) => [String(project._id), project.name]));
   const tasks = await Task.find({ project: { $in: projectIds } })
     .populate("assignee", "name email")
     .lean();
@@ -137,6 +148,71 @@ const getDashboardAnalytics = asyncHandler(async (req, res) => {
       .slice(0, 5),
   };
 
+  const myAssignedTasks = tasks.filter(
+    (task) => task.assignee && String(task.assignee._id) === String(req.user._id)
+  );
+  const myActiveTasks = myAssignedTasks
+    .filter((task) => task.status !== TASK_STATUS.DONE)
+    .sort((a, b) => {
+      const dueA = taskDateValue(a.dueDate);
+      const dueB = taskDateValue(b.dueDate);
+      if (dueA !== dueB) return dueA - dueB;
+      return priorityValue(b.priority) - priorityValue(a.priority);
+    });
+  const myBlockedTasks = myActiveTasks.filter((task) => task.blockedByOpenDependencies);
+  const myReviewTasks = myActiveTasks.filter((task) => task.status === TASK_STATUS.REVIEW);
+  const myDueSoonTasks = myActiveTasks.filter((task) => {
+    if (!task.dueDate) return false;
+    const diffDays = (new Date(task.dueDate) - now) / (1000 * 60 * 60 * 24);
+    return diffDays >= 0 && diffDays <= 3;
+  });
+  const myRecentWins = myAssignedTasks
+    .filter((task) => task.completedAt && new Date(task.completedAt) >= weekAgo)
+    .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
+    .slice(0, 4);
+
+  const personalConsole = {
+    dueSoonCount: myDueSoonTasks.length,
+    blockedCount: myBlockedTasks.length,
+    reviewCount: myReviewTasks.length,
+    activeCount: myActiveTasks.length,
+    focusQueue: myActiveTasks.slice(0, 5).map((task) => ({
+      _id: task._id,
+      title: task.title,
+      status: task.status,
+      priority: task.priority,
+      dueDate: task.dueDate,
+      projectName: projectNameMap.get(String(task.project)) || "Project",
+      blocked: Boolean(task.blockedByOpenDependencies),
+    })),
+    blockedItems: myBlockedTasks.slice(0, 4).map((task) => ({
+      _id: task._id,
+      title: task.title,
+      dueDate: task.dueDate,
+      projectName: projectNameMap.get(String(task.project)) || "Project",
+    })),
+    reviewItems: myReviewTasks.slice(0, 4).map((task) => ({
+      _id: task._id,
+      title: task.title,
+      dueDate: task.dueDate,
+      projectName: projectNameMap.get(String(task.project)) || "Project",
+    })),
+    recentWins: myRecentWins.map((task) => ({
+      _id: task._id,
+      title: task.title,
+      completedAt: task.completedAt,
+      projectName: projectNameMap.get(String(task.project)) || "Project",
+    })),
+    recommendation:
+      myBlockedTasks.length > 0
+        ? "Clear blocked work first to protect the rest of your queue."
+        : myDueSoonTasks.length > 0
+          ? "Focus on due-soon items before pulling more work."
+          : myReviewTasks.length > 0
+            ? "Push review items through to keep delivery moving."
+            : "Your queue is stable. Pull the highest-impact task next.",
+  };
+
   const recentActivity = await ActivityLog.find({ project: { $in: projectIds } })
     .populate("actor", "name")
     .sort({ createdAt: -1 })
@@ -153,6 +229,7 @@ const getDashboardAnalytics = asyncHandler(async (req, res) => {
     priorityDistribution,
     sprintHealth,
     standup,
+    personalConsole,
     recentActivity,
   }, "Analytics fetched");
 });

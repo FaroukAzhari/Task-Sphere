@@ -5,6 +5,21 @@ const asyncHandler = require("../utils/asyncHandler");
 const { sendSuccess } = require("../utils/response");
 const AppError = require("../utils/AppError");
 const { canWriteProject, canManageTeam, isAcceptedTeamMember } = require("../services/accessService");
+const { TEAM_ASSIGNABLE_ROLES, normalizeScopedRole } = require("../services/roleScopeService");
+
+const serializeProject = (projectDoc) => {
+  const project = typeof projectDoc.toObject === "function" ? projectDoc.toObject() : projectDoc;
+  project.members = (project.members || []).map((member) => ({
+    ...member,
+    role: normalizeScopedRole(member.role),
+  }));
+  return project;
+};
+
+const canManageProjectTeam = (team, member, user) =>
+  String(team.owner?._id || team.owner) === String(user._id) ||
+  user.globalRole === "Admin" ||
+  (member && canManageTeam(member.role));
 const normalizeDayStart = (value) => {
   const day = new Date(value);
   day.setHours(0, 0, 0, 0);
@@ -18,7 +33,7 @@ const createProject = asyncHandler(async (req, res) => {
   if (!team) throw new AppError("Team not found", 404);
 
   const teamMember = team.members.find((m) => String(m.user) === String(req.user._id));
-  if (!teamMember || !isAcceptedTeamMember(teamMember) || !canManageTeam(teamMember.role)) {
+  if (!teamMember || !isAcceptedTeamMember(teamMember) || !canManageProjectTeam(team, teamMember, req.user)) {
     throw new AppError("Forbidden", 403);
   }
 
@@ -28,7 +43,7 @@ const createProject = asyncHandler(async (req, res) => {
         isAcceptedTeamMember(m) &&
         (memberIds.length === 0 || memberIds.includes(String(m.user)) || String(m.user) === String(req.user._id))
     )
-    .map((m) => ({ user: m.user, role: m.role }));
+    .map((m) => ({ user: m.user, role: normalizeScopedRole(m.role) }));
 
   if (deadline) {
     const today = normalizeDayStart(new Date());
@@ -47,7 +62,7 @@ const createProject = asyncHandler(async (req, res) => {
     createdBy: req.user._id,
   });
 
-  return sendSuccess(res, project, "Project created", 201);
+  return sendSuccess(res, serializeProject(project), "Project created", 201);
 });
 
 const listProjects = asyncHandler(async (req, res) => {
@@ -59,7 +74,7 @@ const listProjects = asyncHandler(async (req, res) => {
     .populate("team", "name")
     .sort({ createdAt: -1 });
 
-  return sendSuccess(res, projects, "Projects fetched");
+  return sendSuccess(res, projects.map((project) => serializeProject(project)), "Projects fetched");
 });
 
 const getProjectById = asyncHandler(async (req, res) => {
@@ -72,7 +87,7 @@ const getProjectById = asyncHandler(async (req, res) => {
   const member = project.members.find((m) => String(m.user._id) === String(req.user._id));
   if (!member) throw new AppError("Forbidden", 403);
 
-  return sendSuccess(res, project, "Project fetched");
+  return sendSuccess(res, serializeProject(project), "Project fetched");
 });
 
 const updateProject = asyncHandler(async (req, res) => {
@@ -96,7 +111,7 @@ const updateProject = asyncHandler(async (req, res) => {
 
   await project.save();
 
-  return sendSuccess(res, project, "Project updated");
+  return sendSuccess(res, serializeProject(project), "Project updated");
 });
 
 const addProjectMember = asyncHandler(async (req, res) => {
@@ -108,6 +123,9 @@ const addProjectMember = asyncHandler(async (req, res) => {
 
   const actingMember = project.members.find((m) => String(m.user) === String(req.user._id));
   if (!actingMember || !canWriteProject(actingMember.role)) throw new AppError("Forbidden", 403);
+  if (!TEAM_ASSIGNABLE_ROLES.includes(role)) {
+    throw new AppError("Invalid project role", 400);
+  }
 
   const exists = project.members.some((m) => String(m.user) === String(userId));
   if (exists) throw new AppError("User is already in this project", 409);
@@ -118,11 +136,11 @@ const addProjectMember = asyncHandler(async (req, res) => {
   );
   if (!inTeam) throw new AppError("User must belong to the project team", 400);
 
-  project.members.push({ user: userId, role, memberLabel });
+  project.members.push({ user: userId, role: normalizeScopedRole(role), memberLabel });
   await project.save();
 
   const populated = await Project.findById(projectId).populate("members.user", "name email avatarUrl");
-  return sendSuccess(res, populated, "Project member added");
+  return sendSuccess(res, serializeProject(populated), "Project member added");
 });
 
 const updateProjectMemberLabel = asyncHandler(async (req, res) => {
@@ -142,7 +160,7 @@ const updateProjectMemberLabel = asyncHandler(async (req, res) => {
   await project.save();
 
   const populated = await Project.findById(projectId).populate("members.user", "name email avatarUrl");
-  return sendSuccess(res, populated, "Project member label updated");
+  return sendSuccess(res, serializeProject(populated), "Project member label updated");
 });
 
 const getProjectOverview = asyncHandler(async (req, res) => {

@@ -27,9 +27,9 @@ const seed = async () => {
   const seedPasswordHash = await bcrypt.hash("password123", 10);
   const users = await User.insertMany([
     { name: "Admin One", email: "admin@tasksphere.dev", password: seedPasswordHash, globalRole: USER_ROLES.ADMIN },
-    { name: "Maya PM", email: "maya@tasksphere.dev", password: seedPasswordHash, globalRole: USER_ROLES.PROJECT_MANAGER },
-    { name: "Omar Lead", email: "omar@tasksphere.dev", password: seedPasswordHash, globalRole: USER_ROLES.TEAM_LEAD },
-    { name: "Lina Viewer", email: "lina@tasksphere.dev", password: seedPasswordHash, globalRole: USER_ROLES.VIEWER },
+    { name: "Maya PM", email: "maya@tasksphere.dev", password: seedPasswordHash, globalRole: USER_ROLES.MEMBER },
+    { name: "Omar Lead", email: "omar@tasksphere.dev", password: seedPasswordHash, globalRole: USER_ROLES.MEMBER },
+    { name: "Lina Viewer", email: "lina@tasksphere.dev", password: seedPasswordHash, globalRole: USER_ROLES.MEMBER },
     { name: "Sara Member", email: "sara@tasksphere.dev", password: seedPasswordHash, globalRole: USER_ROLES.MEMBER },
   ]);
 
@@ -40,7 +40,7 @@ const seed = async () => {
     description: "University software engineering team",
     owner: admin._id,
     members: [
-      { user: admin._id, role: USER_ROLES.ADMIN, invitedBy: admin._id, status: TEAM_MEMBER_STATUS.ACCEPTED, joinedAt: new Date(), respondedAt: new Date() },
+      { user: admin._id, role: USER_ROLES.PROJECT_MANAGER, invitedBy: admin._id, status: TEAM_MEMBER_STATUS.ACCEPTED, joinedAt: new Date(), respondedAt: new Date() },
       { user: pm._id, role: USER_ROLES.PROJECT_MANAGER, invitedBy: admin._id, status: TEAM_MEMBER_STATUS.ACCEPTED, joinedAt: new Date(), respondedAt: new Date() },
       { user: memberA._id, role: USER_ROLES.TEAM_LEAD, invitedBy: pm._id, status: TEAM_MEMBER_STATUS.ACCEPTED, joinedAt: new Date(), respondedAt: new Date() },
       { user: memberB._id, role: USER_ROLES.MEMBER, invitedBy: pm._id, status: TEAM_MEMBER_STATUS.ACCEPTED, joinedAt: new Date(), respondedAt: new Date() },

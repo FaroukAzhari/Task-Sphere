@@ -435,6 +435,20 @@ const addComment = asyncHandler(async (req, res) => {
   const populated = await comment.populate("author", "name avatarUrl");
   req.app.get("io")?.to(`project:${task.project}`).emit("task:commented", populated);
 
+  if (task.assignee && String(task.assignee) !== String(req.user._id)) {
+    await createNotification({
+      userId: task.assignee,
+      type: "task_comment",
+      title: "New comment on your task",
+      message: `${req.user.name} commented on "${task.title}".`,
+      metadata: {
+        taskId: task._id,
+        projectId: task.project,
+      },
+      io: req.app.get("io"),
+    });
+  }
+
   return sendSuccess(res, populated, "Comment added", 201);
 });
 

@@ -83,7 +83,7 @@ const SettingsPage = () => {
             {form.avatarUrl ? (
               <img src={form.avatarUrl} alt="Avatar preview" className="h-12 w-12 rounded-full border border-slate-300 object-cover" />
             ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-300 bg-slate-100 text-sm font-semibold text-slate-700">
+              <div className="settings-pill flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold">
                 {initials}
               </div>
             )}
@@ -136,10 +136,10 @@ const SettingsPage = () => {
             placeholder="Bio"
           />
 
-          <div className="rounded-2xl border border-slate-200 p-3">
+          <div className="settings-panel rounded-2xl p-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-semibold">Accent color</p>
-              <span className="rounded-full border border-slate-300 px-2 py-0.5 font-mono text-xs">{form.accentColor}</span>
+              <span className="settings-pill rounded-full px-2 py-0.5 font-mono text-xs">{form.accentColor}</span>
             </div>
             <div className="mt-2 flex items-center gap-2">
               <input
@@ -157,7 +157,7 @@ const SettingsPage = () => {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 p-3">
+          <div className="settings-panel rounded-2xl p-3">
             <p className="text-sm font-semibold">Notification preferences</p>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {[
@@ -167,7 +167,7 @@ const SettingsPage = () => {
                 ["mentions", "Mentions"],
                 ["teamInvites", "Team invites"],
               ].map(([key, label]) => (
-                <label key={key} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                <label key={key} className="settings-toggle flex items-center justify-between rounded-xl px-3 py-2 text-sm">
                   <span>{label}</span>
                   <input
                     type="checkbox"
@@ -204,7 +204,7 @@ const SettingsPage = () => {
       <div className="card p-4">
         <p className="ds-kicker text-xs font-semibold">Live preview</p>
         <div
-          className="mt-3 rounded-2xl border border-slate-200 bg-[linear-gradient(145deg,rgba(255,255,255,0.92),rgba(246,250,252,0.92))] p-4"
+          className="settings-preview-card mt-3 rounded-2xl p-4"
           style={{ boxShadow: `inset 0 0 0 1px ${form.accentColor}33` }}
         >
           <div className="flex items-center gap-3">
@@ -212,7 +212,7 @@ const SettingsPage = () => {
               <img src={form.avatarUrl} alt="Preview avatar" className="h-14 w-14 rounded-full border-2 object-cover" style={{ borderColor: form.accentColor }} />
             ) : (
               <div
-                className="flex h-14 w-14 items-center justify-center rounded-full border-2 text-base font-bold text-slate-800"
+                className="settings-preview-avatar flex h-14 w-14 items-center justify-center rounded-full border-2 text-base font-bold"
                 style={{ borderColor: form.accentColor, backgroundColor: `${form.accentColor}22` }}
               >
                 {initials}
@@ -220,7 +220,7 @@ const SettingsPage = () => {
             )}
             <div>
               <p className="text-base font-bold">{form.name || "Your Name"}</p>
-              <p className="text-sm text-slate-600">{form.headline || "Add a short headline to personalize your profile."}</p>
+              <p className="settings-preview-muted text-sm">{form.headline || "Add a short headline to personalize your profile."}</p>
             </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -231,15 +231,15 @@ const SettingsPage = () => {
               {form.focusMode}
             </span>
             {form.location ? (
-              <span className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+              <span className="settings-pill rounded-full px-3 py-1 text-xs font-semibold">
                 {form.location}
               </span>
             ) : null}
-            <span className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+            <span className="settings-pill rounded-full px-3 py-1 text-xs font-semibold">
               {user?.globalRole || "Member"}
             </span>
           </div>
-          <p className="mt-4 rounded-xl border border-slate-200 bg-white/70 p-3 text-sm text-slate-700">
+          <p className="settings-preview-bio mt-4 rounded-xl p-3 text-sm">
             {form.bio || "Write a short bio about your workflow, interests, or role in the team."}
           </p>
         </div>

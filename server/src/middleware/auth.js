@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const AppError = require("../utils/AppError");
+const { syncPlatformRole } = require("../services/roleScopeService");
 
 const protect = async (req, res, next) => {
   const authHeader = req.headers.authorization || "";
@@ -19,6 +20,7 @@ const protect = async (req, res, next) => {
       return next(new AppError("Unauthorized", 401));
     }
 
+    await syncPlatformRole(user);
     req.user = user;
     return next();
   } catch (_error) {

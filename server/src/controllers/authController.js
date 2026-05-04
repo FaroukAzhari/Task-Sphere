@@ -3,6 +3,7 @@ const AppError = require("../utils/AppError");
 const asyncHandler = require("../utils/asyncHandler");
 const { sendSuccess } = require("../utils/response");
 const { signToken } = require("../utils/jwt");
+const { resolvePlatformRole, syncPlatformRole } = require("../services/roleScopeService");
 
 const register = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
@@ -12,7 +13,7 @@ const register = asyncHandler(async (req, res) => {
     throw new AppError("Email already exists", 409);
   }
 
-  const user = await User.create({ name, email, password });
+  const user = await User.create({ name, email, password, globalRole: resolvePlatformRole(email) });
   const token = signToken(user._id);
 
   return sendSuccess(
@@ -34,6 +35,7 @@ const login = asyncHandler(async (req, res) => {
     throw new AppError("Invalid credentials", 401);
   }
 
+  await syncPlatformRole(user);
   user.lastLoginAt = new Date();
   await user.save();
 
@@ -44,6 +46,7 @@ const login = asyncHandler(async (req, res) => {
 });
 
 const me = asyncHandler(async (req, res) => {
+  await syncPlatformRole(req.user);
   return sendSuccess(res, req.user, "Current user fetched");
 });
 
