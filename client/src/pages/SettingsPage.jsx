@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { updateProfileApi } from "../api/userApi";
 import useAuth from "../hooks/useAuth";
+import ErrorBanner from "../components/common/ErrorBanner";
+import { buildDetailMessages, normalizeApiError } from "../utils/apiError";
 
 const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
 const FOCUS_MODES = ["Builder", "Planner", "Reviewer", "Researcher"];
@@ -16,7 +18,7 @@ const readFileAsDataUrl = (file) =>
 
 const SettingsPage = () => {
   const { user, updateUser } = useAuth();
-  const [error, setError] = useState("");
+  const [errorState, setErrorState] = useState({ summary: "", details: [] });
   const [form, setForm] = useState({
     name: user?.name || "",
     bio: user?.bio || "",
@@ -44,25 +46,27 @@ const SettingsPage = () => {
     onSuccess: (payload) => {
       updateUser(payload);
       setForm((prev) => ({ ...prev, ...payload, avatarUrl: payload.avatarUrl || "" }));
+      setErrorState({ summary: "", details: [] });
     },
     onError: (apiError) => {
-      setError(apiError?.response?.data?.message || "Could not update profile.");
+      const parsed = normalizeApiError(apiError, "Profile update could not be completed.");
+      setErrorState({ summary: parsed.summary, details: buildDetailMessages(parsed) });
     },
   });
 
   const handleAvatarFile = async (event) => {
-    setError("");
+    setErrorState({ summary: "", details: [] });
     const file = event.target.files?.[0];
     if (!file) return;
 
     const allowedTypes = ["image/png", "image/jpeg"];
     if (!allowedTypes.includes(file.type)) {
-      setError("Please select a .png or .jpeg/.jpg image file.");
+      setErrorState({ summary: "Please select a .png or .jpeg/.jpg image file.", details: [] });
       return;
     }
 
     if (file.size > MAX_AVATAR_SIZE_BYTES) {
-      setError("Avatar must be 2MB or smaller.");
+      setErrorState({ summary: "Avatar must be 2MB or smaller.", details: [] });
       return;
     }
 
@@ -70,7 +74,7 @@ const SettingsPage = () => {
       const dataUrl = await readFileAsDataUrl(file);
       setForm((prev) => ({ ...prev, avatarUrl: dataUrl }));
     } catch (_err) {
-      setError("Failed to load image file.");
+      setErrorState({ summary: "The selected image could not be loaded.", details: [] });
     }
   };
 
@@ -78,6 +82,9 @@ const SettingsPage = () => {
     <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
       <div className="card p-4">
         <h2 className="ds-text text-lg font-semibold">User settings</h2>
+        <div className="mt-3">
+          <ErrorBanner summary={errorState.summary} details={errorState.details} />
+        </div>
         <div className="mt-3 space-y-3">
           <div className="flex items-center gap-3">
             {form.avatarUrl ? (
@@ -190,7 +197,7 @@ const SettingsPage = () => {
         <button
           type="button"
           onClick={() => {
-            setError("");
+            setErrorState({ summary: "", details: [] });
             mutation.mutate(form);
           }}
           className="ds-btn-primary mt-3 rounded-xl px-4 py-2 text-sm font-semibold"
@@ -198,7 +205,6 @@ const SettingsPage = () => {
           Save profile
         </button>
         {mutation.isSuccess && <p className="mt-2 text-sm text-emerald-600">Profile updated.</p>}
-        {error && <p className="mt-2 text-sm text-rose-500">{error}</p>}
       </div>
 
       <div className="card p-4">

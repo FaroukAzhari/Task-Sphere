@@ -10,7 +10,7 @@ const register = asyncHandler(async (req, res) => {
 
   const exists = await User.findOne({ email });
   if (exists) {
-    throw new AppError("Email already exists", 409);
+    throw new AppError("This email is already registered.", 409, [{ field: "email", message: "This email is already registered.", location: "body", value: email }], "EMAIL_ALREADY_EXISTS");
   }
 
   const user = await User.create({ name, email, password, globalRole: resolvePlatformRole(email) });
@@ -32,7 +32,7 @@ const login = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email });
 
   if (!user || !(await user.comparePassword(password))) {
-    throw new AppError("Invalid credentials", 401);
+    throw new AppError("Incorrect email or password.", 401, null, "INVALID_CREDENTIALS");
   }
 
   await syncPlatformRole(user);

@@ -18,15 +18,85 @@ const taskDateValue = (value) => {
   return new Date(value).getTime();
 };
 
+const ANALYTICS_SCOPES = {
+  MY: "my",
+  TEAM: "team",
+  PROJECT: "project",
+};
+
+const buildEmptyAnalytics = (scopeContext) => ({
+  scopeContext,
+  upcomingDeadlines: [],
+  overdueTasks: [],
+  completedThisWeek: 0,
+  projectProgress: 0,
+  workloadDistribution: [],
+  completionTrends: Array.from({ length: 7 }, (_, index) => {
+    const day = new Date();
+    day.setDate(day.getDate() - (6 - index));
+    return { date: day.toISOString().slice(0, 10), completed: 0 };
+  }),
+  priorityDistribution: ["Low", "Medium", "High", "Critical"].map((priority) => ({
+    priority,
+    count: 0,
+  })),
+  sprintHealth: [],
+  standup: {
+    reviewQueue: [],
+    blockedTasks: [],
+    dueToday: [],
+    myFocus: [],
+    shippedRecently: [],
+  },
+  personalConsole: {
+    dueSoonCount: 0,
+    blockedCount: 0,
+    reviewCount: 0,
+    activeCount: 0,
+    focusQueue: [],
+    blockedItems: [],
+    reviewItems: [],
+    recentWins: [],
+    recommendation: "No scoped work yet. Create or join a project to populate your dashboard.",
+  },
+  recentActivity: [],
+});
+
 const getDashboardAnalytics = asyncHandler(async (req, res) => {
   const { teamId, projectId } = req.query;
+  const scope = req.query.scope || ANALYTICS_SCOPES.MY;
+  if (!Object.values(ANALYTICS_SCOPES).includes(scope)) {
+    throw new AppError("Analytics scope is invalid", 400);
+  }
+
+  if (scope === ANALYTICS_SCOPES.TEAM && !teamId) {
+    throw new AppError("A team must be selected for team analytics", 400);
+  }
+  if (scope === ANALYTICS_SCOPES.PROJECT && !projectId) {
+    throw new AppError("A project must be selected for project analytics", 400);
+  }
 
   const projectFilter = { "members.user": req.user._id };
-  if (teamId) projectFilter.team = teamId;
-  if (projectId) projectFilter._id = projectId;
+  if (scope === ANALYTICS_SCOPES.TEAM) projectFilter.team = teamId;
+  if (scope === ANALYTICS_SCOPES.PROJECT) projectFilter._id = projectId;
 
   const projects = await Project.find(projectFilter).lean();
-  if (!projects.length) throw new AppError("No projects found for user", 404);
+  const scopeContext = {
+    scope,
+    teamId: scope === ANALYTICS_SCOPES.TEAM ? teamId : null,
+    projectId: scope === ANALYTICS_SCOPES.PROJECT ? projectId : null,
+    projectCount: projects.length,
+    label:
+      scope === ANALYTICS_SCOPES.MY
+        ? "My Work"
+        : scope === ANALYTICS_SCOPES.TEAM
+          ? "Team Overview"
+          : "Project Analytics",
+  };
+
+  if (!projects.length) {
+    return sendSuccess(res, buildEmptyAnalytics(scopeContext), "Analytics fetched");
+  }
 
   const projectIds = projects.map((p) => p._id);
   const projectNameMap = new Map(projects.map((project) => [String(project._id), project.name]));

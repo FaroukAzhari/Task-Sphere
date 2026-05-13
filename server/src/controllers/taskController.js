@@ -64,6 +64,28 @@ const decorateTaskListItem = (task, { labelByUserId, subtaskStatsByTaskId, openD
   };
 };
 
+const normalizeDateOnly = (value) => {
+  const date = new Date(value);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const assertDueDateNotInPast = (dueDate) => {
+  if (!dueDate) return;
+
+  const normalizedDueDate = normalizeDateOnly(dueDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (Number.isNaN(normalizedDueDate.getTime())) {
+    throw new AppError("Due date is invalid", 400, null, "INVALID_DUE_DATE");
+  }
+
+  if (normalizedDueDate < today) {
+    throw new AppError("Due date cannot be earlier than today", 400, null, "TASK_DUE_DATE_IN_PAST");
+  }
+};
+
 const createTask = asyncHandler(async (req, res) => {
   const {
     projectId,
@@ -84,6 +106,7 @@ const createTask = asyncHandler(async (req, res) => {
 
   const { project, member } = await assertProjectAccess(projectId, req.user._id);
   if (!canWriteProject(member.role)) throw new AppError("Forbidden", 403);
+  assertDueDateNotInPast(dueDate);
   if (assignee) {
     const isProjectMember = project.members.some((m) => String(m.user) === String(assignee));
     if (!isProjectMember) throw new AppError("Assignee must be a project member", 400);
@@ -314,6 +337,10 @@ const updateTask = asyncHandler(async (req, res) => {
     "storyPoints",
     "sprint",
   ];
+
+  if (req.body.dueDate !== undefined) {
+    assertDueDateNotInPast(req.body.dueDate);
+  }
 
   for (const field of updateFields) {
     if (req.body[field] !== undefined) {

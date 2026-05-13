@@ -12,7 +12,7 @@ const authorize = (...allowedRoles) => (req, _res, next) => {
   const currentRole = req.user?.globalRole || USER_ROLES.MEMBER;
 
   if (!allowedRoles.includes(currentRole)) {
-    return next(new AppError("Forbidden", 403));
+    return next(new AppError("You do not have permission to perform this action.", 403, null, "FORBIDDEN"));
   }
 
   return next();

@@ -12,10 +12,20 @@ const sendSuccess = (res, data = null, message = "OK", statusCode = 200, meta = 
   });
 };
 
-const sendError = (res, message = "Error", statusCode = 500, errors = null, meta = {}) => {
+const sendError = (
+  res,
+  {
+    message = "Error",
+    statusCode = 500,
+    errorCode = "INTERNAL_ERROR",
+    errors = null,
+    meta = {},
+  } = {}
+) => {
   res.status(statusCode).json({
     success: false,
     message,
+    errorCode,
     errors,
     meta: buildMeta(meta),
   });

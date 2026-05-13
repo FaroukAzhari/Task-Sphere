@@ -1,7 +1,7 @@
 import { useDraggable } from "@dnd-kit/core";
 import Badge from "../common/Badge";
 
-const TaskCard = ({ task, onOpen }) => {
+const TaskCard = ({ task, onOpen, sprintContext = null }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task._id,
     data: { task },
@@ -12,6 +12,13 @@ const TaskCard = ({ task, onOpen }) => {
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
       }
     : undefined;
+
+  const isInSelectedSprint = Boolean(
+    sprintContext?.selectedSprintId &&
+    task.sprint &&
+    String(task.sprint) === String(sprintContext.selectedSprintId)
+  );
+  const hasActiveSprint = Boolean(sprintContext?.isActive);
 
   return (
     <button
@@ -39,6 +46,15 @@ const TaskCard = ({ task, onOpen }) => {
           {task.assigneeProjectLabel ? ` (${task.assigneeProjectLabel})` : ""}
         </p>
       </div>
+      {hasActiveSprint ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
+          {isInSelectedSprint ? (
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-700">Counts in sprint</span>
+          ) : (
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">Outside sprint scope</span>
+          )}
+        </div>
+      ) : null}
     </button>
   );
 };

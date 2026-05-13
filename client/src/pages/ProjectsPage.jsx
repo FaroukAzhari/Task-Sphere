@@ -17,6 +17,7 @@ import {
 import LoadingState from "../components/common/LoadingState";
 import EmptyState from "../components/common/EmptyState";
 import Toast from "../components/common/Toast";
+import { buildDetailMessages, normalizeApiError } from "../utils/apiError";
 
 const teamRoles = ["Project Manager", "Team Lead", "Member", "Viewer"];
 const roleRank = {
@@ -31,7 +32,7 @@ const ProjectsPage = () => {
   const queryClient = useQueryClient();
   const [selectedTeam, setSelectedTeam] = useState("");
   const [selectedProject, setSelectedProject] = useState("");
-  const [toast, setToast] = useState({ type: "info", message: "" });
+  const [toast, setToast] = useState({ type: "info", message: "", details: [] });
   const [inviteForm, setInviteForm] = useState({ email: "", role: "Member" });
   const [projectMemberForm, setProjectMemberForm] = useState({ userId: "", role: "Member", memberLabel: "" });
   const [teamForm, setTeamForm] = useState({ name: "", description: "", creatorRole: "Project Manager" });
@@ -66,7 +67,10 @@ const ProjectsPage = () => {
       await queryClient.invalidateQueries({ queryKey: ["team", createdTeam._id] });
       await queryClient.invalidateQueries({ queryKey: ["projects", createdTeam._id] });
     },
-    onError: (error) => setToast({ type: "error", message: error?.response?.data?.message || "Could not create team." }),
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "Team creation could not be completed.");
+      setToast({ type: "error", message: parsed.summary, details: buildDetailMessages(parsed) });
+    },
   });
 
   const createProjectMutation = useMutation({
@@ -76,7 +80,10 @@ const ProjectsPage = () => {
       setToast({ type: "success", message: "Project created." });
       await queryClient.invalidateQueries({ queryKey: ["projects", selectedTeam] });
     },
-    onError: (error) => setToast({ type: "error", message: error?.response?.data?.message || "Could not create project." }),
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "Project creation could not be completed.");
+      setToast({ type: "error", message: parsed.summary, details: buildDetailMessages(parsed) });
+    },
   });
 
   const inviteMemberMutation = useMutation({
@@ -88,7 +95,10 @@ const ProjectsPage = () => {
       await queryClient.invalidateQueries({ queryKey: ["projects", selectedTeam] });
       await queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
-    onError: (error) => setToast({ type: "error", message: error?.response?.data?.message || "Could not invite member." }),
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "The team invitation could not be sent.");
+      setToast({ type: "error", message: parsed.summary, details: buildDetailMessages(parsed) });
+    },
   });
 
   const updateRoleMutation = useMutation({
@@ -98,7 +108,10 @@ const ProjectsPage = () => {
       await queryClient.invalidateQueries({ queryKey: ["team", selectedTeam] });
       await queryClient.invalidateQueries({ queryKey: ["projects", selectedTeam] });
     },
-    onError: (error) => setToast({ type: "error", message: error?.response?.data?.message || "Could not update role." }),
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "The team role could not be updated.");
+      setToast({ type: "error", message: parsed.summary, details: buildDetailMessages(parsed) });
+    },
   });
 
   const addProjectMemberMutation = useMutation({
@@ -110,7 +123,10 @@ const ProjectsPage = () => {
         await queryClient.invalidateQueries({ queryKey: ["project", selectedProject] });
       }
     },
-    onError: (error) => setToast({ type: "error", message: error?.response?.data?.message || "Could not add to project." }),
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "The project member could not be added.");
+      setToast({ type: "error", message: parsed.summary, details: buildDetailMessages(parsed) });
+    },
   });
 
   const updateProjectMemberLabelMutation = useMutation({
@@ -119,7 +135,10 @@ const ProjectsPage = () => {
       setToast({ type: "success", message: "Member label updated." });
       await queryClient.invalidateQueries({ queryKey: ["project", selectedProject] });
     },
-    onError: (error) => setToast({ type: "error", message: error?.response?.data?.message || "Could not update member label." }),
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "The member label could not be updated.");
+      setToast({ type: "error", message: parsed.summary, details: buildDetailMessages(parsed) });
+    },
   });
 
   const teams = teamsQuery.data || [];
@@ -199,7 +218,7 @@ const ProjectsPage = () => {
               type="button"
               onClick={() => {
                 if (projectForm.deadline && projectForm.deadline < todayISO) {
-                  setToast({ type: "error", message: "Project deadline cannot be earlier than today." });
+                  setToast({ type: "error", message: "Project deadline cannot be earlier than today.", details: [] });
                   return;
                 }
                 createProjectMutation.mutate({ ...projectForm, teamId: selectedTeam });
@@ -378,7 +397,7 @@ const ProjectsPage = () => {
         {selectedTeam && projects.length === 0 && <EmptyState title="No projects yet" description="Create your first project for this team." />}
       </section>
 
-      <Toast message={toast.message} type={toast.type} onClose={() => setToast({ type: "info", message: "" })} />
+      <Toast message={toast.message} details={toast.details} type={toast.type} onClose={() => setToast({ type: "info", message: "", details: [] })} />
     </div>
   );
 };

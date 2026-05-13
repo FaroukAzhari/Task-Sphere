@@ -1,12 +1,16 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import useAuth from "../hooks/useAuth";
 import { acceptTeamInvitationApi, declineTeamInvitationApi } from "../api/projectApi";
 import { fetchNotificationsApi, markAllNotificationsReadApi, markNotificationReadApi } from "../api/notificationApi";
 import LoadingState from "../components/common/LoadingState";
+import Toast from "../components/common/Toast";
+import { buildDetailMessages, normalizeApiError } from "../utils/apiError";
 
 const NotificationsPage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [toast, setToast] = useState({ type: "info", message: "", details: [] });
 
   const notificationsQuery = useQuery({
     queryKey: ["notifications"],
@@ -18,12 +22,20 @@ const NotificationsPage = () => {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "The notification could not be marked as read.");
+      setToast({ type: "error", message: parsed.summary, details: buildDetailMessages(parsed) });
+    },
   });
 
   const markAllMutation = useMutation({
     mutationFn: markAllNotificationsReadApi,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "Notifications could not be marked as read.");
+      setToast({ type: "error", message: parsed.summary, details: buildDetailMessages(parsed) });
     },
   });
 
@@ -36,6 +48,10 @@ const NotificationsPage = () => {
         queryClient.invalidateQueries({ queryKey: ["dashboard-analytics"] }),
       ]);
     },
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "The invitation could not be accepted.");
+      setToast({ type: "error", message: parsed.summary, details: buildDetailMessages(parsed) });
+    },
   });
 
   const declineInviteMutation = useMutation({
@@ -46,6 +62,10 @@ const NotificationsPage = () => {
         queryClient.invalidateQueries({ queryKey: ["teams"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboard-analytics"] }),
       ]);
+    },
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "The invitation could not be declined.");
+      setToast({ type: "error", message: parsed.summary, details: buildDetailMessages(parsed) });
     },
   });
 
@@ -135,6 +155,7 @@ const NotificationsPage = () => {
         })}
         {notificationsQuery.data.length === 0 && <p className="text-sm text-slate-500">No notifications yet.</p>}
       </div>
+      <Toast message={toast.message} details={toast.details} type={toast.type} onClose={() => setToast({ type: "info", message: "", details: [] })} />
     </div>
   );
 };

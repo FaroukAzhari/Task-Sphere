@@ -10,9 +10,12 @@ import {
   updateProjectDocumentApi,
 } from "../../api/projectApi";
 import Badge from "../common/Badge";
+import ErrorBanner from "../common/ErrorBanner";
+import { buildDetailMessages, normalizeApiError } from "../../utils/apiError";
 
 const ProjectHub = ({ projectId, canContribute, canModerate }) => {
   const queryClient = useQueryClient();
+  const [errorState, setErrorState] = useState({ summary: "", details: [] });
   const [discussionText, setDiscussionText] = useState("");
   const [documentForm, setDocumentForm] = useState({
     title: "",
@@ -38,14 +41,24 @@ const ProjectHub = ({ projectId, canContribute, canModerate }) => {
     mutationFn: createProjectDiscussionApi,
     onSuccess: async () => {
       setDiscussionText("");
+      setErrorState({ summary: "", details: [] });
       await queryClient.invalidateQueries({ queryKey: ["project-discussions", projectId] });
+    },
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "The update could not be posted.");
+      setErrorState({ summary: parsed.summary, details: buildDetailMessages(parsed) });
     },
   });
 
   const togglePinMutation = useMutation({
     mutationFn: toggleProjectDiscussionPinApi,
     onSuccess: async () => {
+      setErrorState({ summary: "", details: [] });
       await queryClient.invalidateQueries({ queryKey: ["project-discussions", projectId] });
+    },
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "The pin action could not be completed.");
+      setErrorState({ summary: parsed.summary, details: buildDetailMessages(parsed) });
     },
   });
 
@@ -53,14 +66,24 @@ const ProjectHub = ({ projectId, canContribute, canModerate }) => {
     mutationFn: createProjectDocumentApi,
     onSuccess: async () => {
       setDocumentForm({ title: "", description: "", url: "", category: "General" });
+      setErrorState({ summary: "", details: [] });
       await queryClient.invalidateQueries({ queryKey: ["project-documents", projectId] });
+    },
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "The document could not be saved.");
+      setErrorState({ summary: parsed.summary, details: buildDetailMessages(parsed) });
     },
   });
 
   const deleteDocumentMutation = useMutation({
     mutationFn: deleteProjectDocumentApi,
     onSuccess: async () => {
+      setErrorState({ summary: "", details: [] });
       await queryClient.invalidateQueries({ queryKey: ["project-documents", projectId] });
+    },
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "The document could not be deleted.");
+      setErrorState({ summary: parsed.summary, details: buildDetailMessages(parsed) });
     },
   });
 
@@ -69,7 +92,12 @@ const ProjectHub = ({ projectId, canContribute, canModerate }) => {
     onSuccess: async () => {
       setEditingDocumentId("");
       setDocumentForm({ title: "", description: "", url: "", category: "General" });
+      setErrorState({ summary: "", details: [] });
       await queryClient.invalidateQueries({ queryKey: ["project-documents", projectId] });
+    },
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "The document could not be updated.");
+      setErrorState({ summary: parsed.summary, details: buildDetailMessages(parsed) });
     },
   });
 
@@ -97,6 +125,7 @@ const ProjectHub = ({ projectId, canContribute, canModerate }) => {
   return (
     <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
       <section className="card p-5">
+        <ErrorBanner summary={errorState.summary} details={errorState.details} />
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="ds-kicker text-[11px] font-semibold">Project Hub</p>

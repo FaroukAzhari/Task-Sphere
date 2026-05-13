@@ -1,24 +1,90 @@
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchAnalyticsApi } from "../api/analyticsApi";
+import { fetchProjectsApi, fetchTeamsApi } from "../api/projectApi";
 import StatCard from "../components/dashboard/StatCard";
 import LoadingState from "../components/common/LoadingState";
 import EmptyState from "../components/common/EmptyState";
 import Badge from "../components/common/Badge";
 import PersonalWorkConsole from "../components/dashboard/PersonalWorkConsole";
+import AnalyticsScopeBar from "../components/analytics/AnalyticsScopeBar";
 import { formatDate } from "../utils/helpers";
 
 const DashboardPage = () => {
+  const [scope, setScope] = useState("my");
+  const [selectedTeam, setSelectedTeam] = useState("");
+  const [selectedProject, setSelectedProject] = useState("");
+
+  const teamsQuery = useQuery({ queryKey: ["analytics-teams"], queryFn: fetchTeamsApi });
+  const teams = useMemo(
+    () => (teamsQuery.data || []).filter((team) => (team.currentUserStatus || "accepted") === "accepted"),
+    [teamsQuery.data]
+  );
+  const projectsQuery = useQuery({
+    queryKey: ["analytics-projects", selectedTeam || "all"],
+    queryFn: () => fetchProjectsApi(selectedTeam || undefined),
+    enabled: scope === "project" || scope === "team",
+  });
+  const projects = projectsQuery.data || [];
+
+  useEffect(() => {
+    if ((scope === "team" || scope === "project") && teams.length > 0 && !teams.some((team) => team._id === selectedTeam)) {
+      setSelectedTeam(teams[0]._id);
+    }
+  }, [scope, teams, selectedTeam]);
+
+  useEffect(() => {
+    if (scope === "project") {
+      if (projects.length > 0 && !projects.some((project) => project._id === selectedProject)) {
+        setSelectedProject(projects[0]._id);
+      }
+      if (projects.length === 0) {
+        setSelectedProject("");
+      }
+    }
+  }, [scope, projects, selectedProject]);
+
+  const analyticsParams = useMemo(() => {
+    if (scope === "team") return selectedTeam ? { scope, teamId: selectedTeam } : null;
+    if (scope === "project") return selectedProject ? { scope, projectId: selectedProject } : null;
+    return { scope: "my" };
+  }, [scope, selectedTeam, selectedProject]);
+
   const analyticsQuery = useQuery({
-    queryKey: ["dashboard-analytics"],
-    queryFn: () => fetchAnalyticsApi({}),
+    queryKey: ["dashboard-analytics", analyticsParams],
+    queryFn: () => fetchAnalyticsApi(analyticsParams),
+    enabled: Boolean(analyticsParams),
   });
 
-  if (analyticsQuery.isLoading) return <LoadingState label="Loading dashboard" />;
+  if (!analyticsParams) {
+    return (
+      <div className="space-y-5">
+        <AnalyticsScopeBar
+          scope={scope}
+          onScopeChange={setScope}
+          teams={teams}
+          projects={projects}
+          selectedTeam={selectedTeam}
+          onTeamChange={setSelectedTeam}
+          selectedProject={selectedProject}
+          onProjectChange={setSelectedProject}
+          helperText="Dashboard defaults to personal execution. The top strip and personal console stay user-specific inside the chosen scope; team pulse and delivery snapshot follow the selected scope."
+        />
+        <EmptyState
+          title={scope === "team" ? "Select a team" : "Select a project"}
+          description={scope === "team" ? "Choose a team to load scoped dashboard data." : "Choose a project to load scoped dashboard data."}
+        />
+      </div>
+    );
+  }
+
+  if ((teamsQuery.isLoading && scope !== "my") || analyticsQuery.isLoading) return <LoadingState label="Loading dashboard" />;
   if (analyticsQuery.isError) {
     return <EmptyState title="Analytics unavailable" description="Create a project and tasks to see dashboard metrics." />;
   }
 
   const data = analyticsQuery.data;
+  const scopeLabel = data.scopeContext?.label || "My Work";
   const topFocus = data.personalConsole?.focusQueue?.slice(0, 3) || [];
   const topBlocked = data.standup.blockedTasks.slice(0, 3);
   const topUpcoming = data.upcomingDeadlines.slice(0, 4);
@@ -26,11 +92,23 @@ const DashboardPage = () => {
 
   return (
     <div className="space-y-5">
+      <AnalyticsScopeBar
+        scope={scope}
+        onScopeChange={setScope}
+        teams={teams}
+        projects={projects}
+        selectedTeam={selectedTeam}
+        onTeamChange={setSelectedTeam}
+        selectedProject={selectedProject}
+        onProjectChange={setSelectedProject}
+        helperText="Dashboard defaults to personal execution. The top strip and personal console stay user-specific inside the chosen scope; team pulse and delivery snapshot follow the selected scope."
+      />
+
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard label="My Active Items" value={data.personalConsole?.activeCount || 0} />
-        <StatCard label="Due Soon" value={data.personalConsole?.dueSoonCount || 0} tone="warn" />
-        <StatCard label="Blocked" value={data.personalConsole?.blockedCount || 0} tone="danger" />
-        <StatCard label="Review Queue" value={data.personalConsole?.reviewCount || 0} tone="success" />
+        <StatCard label="My Due Soon" value={data.personalConsole?.dueSoonCount || 0} tone="warn" />
+        <StatCard label="My Blocked" value={data.personalConsole?.blockedCount || 0} tone="danger" />
+        <StatCard label="My Review Queue" value={data.personalConsole?.reviewCount || 0} tone="success" />
       </section>
 
       <PersonalWorkConsole data={data.personalConsole} />
@@ -40,9 +118,9 @@ const DashboardPage = () => {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-2xl">
               <p className="ds-kicker text-[11px] font-semibold">Team Pulse</p>
-              <h2 className="ds-text mt-2 text-3xl font-black">Where the team needs attention</h2>
+              <h2 className="ds-text mt-2 text-3xl font-black">{scopeLabel}: where attention is needed</h2>
               <p className="ds-muted mt-3 max-w-xl text-sm leading-relaxed md:text-base">
-                A narrower operational view of blockers, due-soon items, and work that should be pulled next.
+                A scoped operational view of blockers, due-soon items, and work that should be pulled next.
               </p>
             </div>
             <div className="dashboard-summary-callout rounded-2xl px-4 py-3">
@@ -102,7 +180,7 @@ const DashboardPage = () => {
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="ds-kicker text-[11px] font-semibold">Delivery Snapshot</p>
-              <h2 className="ds-text mt-2 text-3xl font-black">Cross-project view</h2>
+              <h2 className="ds-text mt-2 text-3xl font-black">{scopeLabel}</h2>
             </div>
             <span className="settings-pill rounded-full px-3 py-1 text-xs font-semibold">compact digest</span>
           </div>

@@ -9,6 +9,18 @@ const { createNotification } = require("../services/notificationService");
 
 const canRunSprintByRole = (role) => [USER_ROLES.PROJECT_MANAGER, USER_ROLES.TEAM_LEAD].includes(role);
 
+const normalizeDateOnly = (value) => {
+  const date = new Date(value);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const getToday = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+};
+
 const assertSprintPermission = async (projectId, userId) => {
   const project = await Project.findById(projectId);
   if (!project) throw new AppError("Project not found", 404);
@@ -92,6 +104,20 @@ const createSprint = asyncHandler(async (req, res) => {
   const { name, goal, startDate, endDate, capacity, taskIds = [] } = req.body;
 
   const { project } = await assertSprintPermission(projectId, req.user._id);
+
+  const today = getToday();
+  const normalizedStart = normalizeDateOnly(startDate);
+  const normalizedEnd = normalizeDateOnly(endDate);
+
+  if (Number.isNaN(normalizedStart.getTime()) || Number.isNaN(normalizedEnd.getTime())) {
+    throw new AppError("Sprint start and end dates are required", 400, null, "INVALID_SPRINT_DATE");
+  }
+  if (normalizedStart < today || normalizedEnd < today) {
+    throw new AppError("Sprint dates cannot be earlier than today", 400, null, "SPRINT_DATE_IN_PAST");
+  }
+  if (normalizedEnd < normalizedStart) {
+    throw new AppError("Sprint end date must be on or after the start date", 400, null, "SPRINT_DATE_RANGE_INVALID");
+  }
 
   const tasks = await Task.find({ _id: { $in: taskIds }, project: project._id }).select("_id").lean();
   if (taskIds.length > 0 && tasks.length !== taskIds.length) {

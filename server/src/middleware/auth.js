@@ -7,7 +7,7 @@ const protect = async (req, res, next) => {
   const authHeader = req.headers.authorization || "";
 
   if (!authHeader.startsWith("Bearer ")) {
-    return next(new AppError("Unauthorized", 401));
+    return next(new AppError("You must sign in to continue.", 401, null, "AUTH_REQUIRED"));
   }
 
   const token = authHeader.replace("Bearer ", "").trim();
@@ -17,14 +17,14 @@ const protect = async (req, res, next) => {
     const user = await User.findById(decoded.userId).select("-password");
 
     if (!user) {
-      return next(new AppError("Unauthorized", 401));
+      return next(new AppError("Your session is no longer valid. Please sign in again.", 401, null, "SESSION_INVALID"));
     }
 
     await syncPlatformRole(user);
     req.user = user;
     return next();
   } catch (_error) {
-    return next(new AppError("Invalid token", 401));
+    return next(new AppError("Your session is invalid or has expired. Please sign in again.", 401, null, "SESSION_INVALID"));
   }
 };
 

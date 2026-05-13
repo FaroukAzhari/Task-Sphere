@@ -22,6 +22,7 @@ import TaskModal from "../components/kanban/TaskModal";
 import ProjectGanttTimeline from "../components/project/ProjectGanttTimeline";
 import ProjectHub from "../components/project/ProjectHub";
 import RoadmapTimeline from "../components/project/RoadmapTimeline";
+import { buildDetailMessages, normalizeApiError } from "../utils/apiError";
 import { groupTasksByStatus } from "../utils/helpers";
 
 const STATUSES = ["Backlog", "To Do", "In Progress", "Review", "Done"];
@@ -32,6 +33,12 @@ const getTaskAssigneeId = (task) => {
   if (!task?.assignee) return "";
   if (typeof task.assignee === "string") return task.assignee;
   return task.assignee._id || "";
+};
+
+const todayIso = () => {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60 * 1000;
+  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
 };
 
 const buildTaskPayload = (taskForm, projectId) => ({
@@ -45,6 +52,8 @@ const buildTaskPayload = (taskForm, projectId) => ({
   dueDate: taskForm.dueDate ? taskForm.dueDate : undefined,
 });
 
+const getSprintPointValue = (task) => task.storyPoints || task.estimatedEffort || 1;
+
 const ProjectWorkspacePage = () => {
   const { projectId } = useParams();
   const { user } = useAuth();
@@ -55,7 +64,7 @@ const ProjectWorkspacePage = () => {
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({ priority: "", assignee: "", taskType: "" });
   const [statusView, setStatusView] = useState("All");
-  const [toast, setToast] = useState({ type: "info", message: "" });
+  const [toast, setToast] = useState({ type: "info", message: "", details: [] });
   const [taskForm, setTaskForm] = useState({
     title: "",
     priority: "Medium",
@@ -76,6 +85,7 @@ const ProjectWorkspacePage = () => {
 
   const taskQueryKey = ["tasks", projectId];
   const deferredSearch = useDeferredValue(search);
+  const minDate = todayIso();
 
   const projectQuery = useQuery({ queryKey: ["project", projectId], queryFn: () => fetchProjectApi(projectId) });
   const tasksQuery = useQuery({
@@ -104,7 +114,8 @@ const ProjectWorkspacePage = () => {
     },
     onError: (_error, _variables, context) => {
       if (context?.previous) queryClient.setQueryData(taskQueryKey, context.previous);
-      setToast({ type: "error", message: "Task move failed. Try again." });
+      const parsed = normalizeApiError(_error, "The task could not be moved.");
+      setToast({ type: "error", message: parsed.summary, details: buildDetailMessages(parsed) });
     },
     onSuccess: () => setToast({ type: "success", message: "Task moved." }),
     onSettled: async () => {
@@ -122,7 +133,10 @@ const ProjectWorkspacePage = () => {
       queryClient.setQueryData(taskQueryKey, (old = []) => [createdTask, ...old]);
       await queryClient.invalidateQueries({ queryKey: ["tasks", projectId] });
     },
-    onError: (error) => setToast({ type: "error", message: error?.response?.data?.message || "Could not create task." }),
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "The work item could not be created.");
+      setToast({ type: "error", message: parsed.summary, details: buildDetailMessages(parsed) });
+    },
   });
 
   const createSprintMutation = useMutation({
@@ -133,7 +147,10 @@ const ProjectWorkspacePage = () => {
       await queryClient.invalidateQueries({ queryKey: ["project-sprints", projectId] });
       await queryClient.invalidateQueries({ queryKey: ["tasks", projectId] });
     },
-    onError: (error) => setToast({ type: "error", message: error?.response?.data?.message || "Could not create sprint." }),
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "The sprint could not be created.");
+      setToast({ type: "error", message: parsed.summary, details: buildDetailMessages(parsed) });
+    },
   });
 
   const startSprintMutation = useMutation({
@@ -143,7 +160,10 @@ const ProjectWorkspacePage = () => {
       await queryClient.invalidateQueries({ queryKey: ["project-sprints", projectId] });
       if (selectedSprintId) await queryClient.invalidateQueries({ queryKey: ["sprint-burndown", projectId, selectedSprintId] });
     },
-    onError: (error) => setToast({ type: "error", message: error?.response?.data?.message || "Could not start sprint." }),
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "The sprint could not be started.");
+      setToast({ type: "error", message: parsed.summary, details: buildDetailMessages(parsed) });
+    },
   });
 
   const closeSprintMutation = useMutation({
@@ -153,7 +173,10 @@ const ProjectWorkspacePage = () => {
       await queryClient.invalidateQueries({ queryKey: ["project-sprints", projectId] });
       if (selectedSprintId) await queryClient.invalidateQueries({ queryKey: ["sprint-burndown", projectId, selectedSprintId] });
     },
-    onError: (error) => setToast({ type: "error", message: error?.response?.data?.message || "Could not close sprint." }),
+    onError: (error) => {
+      const parsed = normalizeApiError(error, "The sprint could not be closed.");
+      setToast({ type: "error", message: parsed.summary, details: buildDetailMessages(parsed) });
+    },
   });
 
   useEffect(() => {
@@ -218,6 +241,41 @@ const ProjectWorkspacePage = () => {
     return counts;
   }, [filteredTasks]);
 
+  const selectedSprint = useMemo(
+    () => sprints.find((sprint) => String(sprint._id) === String(selectedSprintId)) || null,
+    [sprints, selectedSprintId]
+  );
+
+  const selectedSprintTasks = useMemo(
+    () => tasks.filter((task) => selectedSprint?.taskIds?.some((id) => String(id) === String(task._id))),
+    [tasks, selectedSprint]
+  );
+
+  const selectedSprintScope = useMemo(() => {
+    const totalPoints = selectedSprintTasks.reduce((sum, task) => sum + getSprintPointValue(task), 0);
+    const storyPoints = selectedSprintTasks
+      .filter((task) => task.taskType === "Story")
+      .reduce((sum, task) => sum + (task.storyPoints || 0), 0);
+    const nonStoryEffort = selectedSprintTasks
+      .filter((task) => task.taskType !== "Story")
+      .reduce((sum, task) => sum + (task.estimatedEffort || 1), 0);
+
+    return {
+      totalPoints,
+      storyPoints,
+      nonStoryEffort,
+      itemCount: selectedSprintTasks.length,
+    };
+  }, [selectedSprintTasks]);
+
+  const sprintContext = useMemo(
+    () => ({
+      selectedSprintId,
+      isActive: selectedSprint?.status === "Active",
+    }),
+    [selectedSprint, selectedSprintId]
+  );
+
   const handleDragEnd = (event) => {
     const task = event.active.data.current?.task;
     const newStatus = event.over?.id;
@@ -227,11 +285,38 @@ const ProjectWorkspacePage = () => {
 
   const handleCreateTask = () => {
     const payload = buildTaskPayload(taskForm, projectId);
-    if (!payload.title) return setToast({ type: "error", message: "Task title is required." });
+    if (!payload.title) return setToast({ type: "error", message: "Task title is required.", details: [] });
     if (payload.taskType === "Story" && (!payload.storyPoints || payload.storyPoints < 1)) {
-      return setToast({ type: "error", message: "Story points must be a positive integer." });
+      return setToast({ type: "error", message: "Story points must be a positive integer.", details: [] });
+    }
+    if (payload.dueDate && payload.dueDate < minDate) {
+      return setToast({
+        type: "error",
+        message: "Due date cannot be earlier than today.",
+        details: ["Pick today or a future date for this work item."],
+      });
     }
     createTaskMutation.mutate(payload);
+  };
+
+  const handleCreateSprint = () => {
+    if (sprintForm.startDate < minDate || sprintForm.endDate < minDate) {
+      return setToast({
+        type: "error",
+        message: "Sprint dates cannot be earlier than today.",
+        details: ["Set both sprint start and end dates to today or later."],
+      });
+    }
+
+    if (sprintForm.endDate < sprintForm.startDate) {
+      return setToast({
+        type: "error",
+        message: "Sprint end date must be on or after the start date.",
+        details: ["Adjust the sprint date range before creating it."],
+      });
+    }
+
+    createSprintMutation.mutate({ projectId, payload: sprintForm });
   };
 
   const handleSprintTaskSelection = (taskId, checked) => {
@@ -254,7 +339,7 @@ const ProjectWorkspacePage = () => {
             <p className="ds-kicker text-[11px] font-semibold">Project Workspace</p>
             <h2 className="ds-text mt-2 text-3xl font-black tracking-tight md:text-5xl">{projectQuery.data.name}</h2>
             <p className="ds-muted mt-2 max-w-2xl text-sm md:text-base">
-              {projectQuery.data.description || "No description"}
+              {projectQuery.data.description || ""}
             </p>
           </div>
           <div className="workspace-tabs">
@@ -296,11 +381,11 @@ const ProjectWorkspacePage = () => {
                   <option value="">Unassigned</option>
                   {projectMembers.map((member) => <option key={member.user._id} value={member.user._id}>{member.user.name}{member.memberLabel ? ` - ${member.memberLabel}` : ""}</option>)}
                 </select>
-                <input type="date" className="rounded-xl border border-slate-300 px-3 py-2" value={taskForm.dueDate} onChange={(e) => setTaskForm((prev) => ({ ...prev, dueDate: e.target.value }))} />
+                <input type="date" min={minDate} className="rounded-xl border border-slate-300 px-3 py-2" value={taskForm.dueDate} onChange={(e) => setTaskForm((prev) => ({ ...prev, dueDate: e.target.value }))} />
               </div>
               <div className="mt-3 flex items-center gap-3">
                 <button type="button" disabled={createTaskMutation.isPending || !canContribute} className="ds-btn-primary rounded-xl px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60" onClick={handleCreateTask}>{createTaskMutation.isPending ? "Adding..." : `Add ${taskForm.taskType}`}</button>
-                <p className="ds-muted text-xs">Assign now or keep it unassigned. Viewers cannot create work items.</p>
+                <p className="ds-muted text-xs">Assign now or keep it unassigned. New work stays on the board immediately, but only sprint-allocated items affect sprint burndown.</p>
               </div>
             </section>
 
@@ -321,8 +406,8 @@ const ProjectWorkspacePage = () => {
                       <input className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Sprint name" value={sprintForm.name} onChange={(e) => setSprintForm((prev) => ({ ...prev, name: e.target.value }))} />
                       <input className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Sprint goal" value={sprintForm.goal} onChange={(e) => setSprintForm((prev) => ({ ...prev, goal: e.target.value }))} />
                       <div className="grid gap-2 md:grid-cols-3">
-                        <input type="date" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" value={sprintForm.startDate} onChange={(e) => setSprintForm((prev) => ({ ...prev, startDate: e.target.value }))} />
-                        <input type="date" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" value={sprintForm.endDate} onChange={(e) => setSprintForm((prev) => ({ ...prev, endDate: e.target.value }))} />
+                        <input type="date" min={minDate} className="rounded-lg border border-slate-300 px-3 py-2 text-sm" value={sprintForm.startDate} onChange={(e) => setSprintForm((prev) => ({ ...prev, startDate: e.target.value }))} />
+                        <input type="date" min={sprintForm.startDate || minDate} className="rounded-lg border border-slate-300 px-3 py-2 text-sm" value={sprintForm.endDate} onChange={(e) => setSprintForm((prev) => ({ ...prev, endDate: e.target.value }))} />
                         <input type="number" min={1} className="rounded-lg border border-slate-300 px-3 py-2 text-sm" value={sprintForm.capacity} onChange={(e) => setSprintForm((prev) => ({ ...prev, capacity: Number(e.target.value) || 1 }))} />
                       </div>
                       <div className="max-h-28 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
@@ -337,7 +422,7 @@ const ProjectWorkspacePage = () => {
                       <button
                         type="button"
                         className="ds-btn-secondary rounded-lg px-3 py-2 text-xs font-semibold"
-                        onClick={() => createSprintMutation.mutate({ projectId, payload: sprintForm })}
+                        onClick={handleCreateSprint}
                         disabled={!sprintForm.name || !sprintForm.startDate || !sprintForm.endDate}
                       >
                         Create sprint
@@ -356,6 +441,7 @@ const ProjectWorkspacePage = () => {
                         <button type="button" className="ds-btn-primary rounded-lg px-3 py-2 text-xs font-semibold" disabled={!selectedSprintId} onClick={() => startSprintMutation.mutate({ projectId, sprintId: selectedSprintId })}>Start sprint</button>
                         <button type="button" className="ds-btn-secondary rounded-lg px-3 py-2 text-xs font-semibold" disabled={!selectedSprintId} onClick={() => closeSprintMutation.mutate({ projectId, sprintId: selectedSprintId })}>Close sprint</button>
                       </div>
+                      
                       <div className="h-44 rounded-lg border border-slate-200 bg-slate-50/50 p-2">
                         {burndownQuery.data?.length ? (
                           <ResponsiveContainer width="100%" height="100%">
@@ -382,6 +468,14 @@ const ProjectWorkspacePage = () => {
           </section>
 
           <section className="card p-4">
+            {selectedSprint?.status === "Active" ? (
+              <div className="mb-3 rounded-2xl border border-teal-200 bg-teal-50/70 px-4 py-3 text-sm text-teal-900">
+                <p className="font-semibold">Active sprint scope is locked to allocated items.</p>
+                <p className="mt-1 text-xs text-teal-800">
+                  Cards labeled <strong>Counts in sprint</strong> contribute to burndown. Cards labeled <strong>Outside sprint scope</strong> stay visible on the Kanban board but do not change sprint metrics.
+                </p>
+              </div>
+            ) : null}
             <div className="grid gap-2 md:grid-cols-4">
               <input className="rounded-xl border border-slate-300 px-3 py-2" placeholder="Search tasks" value={search} onChange={(e) => setSearch(e.target.value)} />
               <select className="rounded-xl border border-slate-300 px-3 py-2" value={filters.priority} onChange={(e) => setFilters((prev) => ({ ...prev, priority: e.target.value }))}><option value="">All priorities</option><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select>
@@ -409,7 +503,7 @@ const ProjectWorkspacePage = () => {
           <DndContext onDragEnd={handleDragEnd}>
             <section className="grid gap-3 xl:grid-cols-5">
               {STATUSES.map((status) => (
-                <KanbanColumn key={status} status={status} tasks={grouped[status] || []} onOpenTask={setSelectedTaskId} showStatusHint={statusView !== "All"} />
+                <KanbanColumn key={status} status={status} tasks={grouped[status] || []} onOpenTask={setSelectedTaskId} showStatusHint={statusView !== "All"} sprintContext={sprintContext} />
               ))}
             </section>
           </DndContext>
@@ -432,7 +526,7 @@ const ProjectWorkspacePage = () => {
       ) : null}
 
       {selectedTaskId && <TaskModal taskId={selectedTaskId} onClose={() => setSelectedTaskId("")} />}
-      <Toast message={toast.message} type={toast.type} onClose={() => setToast({ type: "info", message: "" })} />
+      <Toast message={toast.message} details={toast.details} type={toast.type} onClose={() => setToast({ type: "info", message: "", details: [] })} />
     </div>
   );
 };

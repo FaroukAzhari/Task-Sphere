@@ -1,7 +1,7 @@
 import { useDroppable } from "@dnd-kit/core";
 import TaskCard from "./TaskCard";
 
-const KanbanColumn = ({ status, tasks, onOpenTask, showStatusHint = false }) => {
+const KanbanColumn = ({ status, tasks, onOpenTask, showStatusHint = false, sprintContext = null }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: status,
   });
@@ -19,7 +19,7 @@ const KanbanColumn = ({ status, tasks, onOpenTask, showStatusHint = false }) => 
       </div>
       <div className="space-y-2">
         {tasks.map((task) => (
-          <TaskCard key={task._id} task={task} onOpen={onOpenTask} />
+          <TaskCard key={task._id} task={task} onOpen={onOpenTask} sprintContext={sprintContext} />
         ))}
         {tasks.length === 0 && (
           <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 p-3 text-xs text-slate-500">

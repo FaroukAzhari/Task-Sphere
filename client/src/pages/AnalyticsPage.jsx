@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Bar,
@@ -15,22 +16,98 @@ import {
   Cell,
 } from "recharts";
 import { fetchAnalyticsApi } from "../api/analyticsApi";
+import { fetchProjectsApi, fetchTeamsApi } from "../api/projectApi";
+import AnalyticsScopeBar from "../components/analytics/AnalyticsScopeBar";
 import LoadingState from "../components/common/LoadingState";
+import EmptyState from "../components/common/EmptyState";
 
 const AnalyticsPage = () => {
+  const [scope, setScope] = useState("project");
+  const [selectedTeam, setSelectedTeam] = useState("");
+  const [selectedProject, setSelectedProject] = useState("");
+
+  const teamsQuery = useQuery({ queryKey: ["analytics-page-teams"], queryFn: fetchTeamsApi });
+  const teams = useMemo(
+    () => (teamsQuery.data || []).filter((team) => (team.currentUserStatus || "accepted") === "accepted"),
+    [teamsQuery.data]
+  );
+  const projectsQuery = useQuery({
+    queryKey: ["analytics-page-projects", selectedTeam || "all"],
+    queryFn: () => fetchProjectsApi(selectedTeam || undefined),
+    enabled: scope === "project" || scope === "team",
+  });
+  const projects = projectsQuery.data || [];
+
+  useEffect(() => {
+    if ((scope === "team" || scope === "project") && teams.length > 0 && !teams.some((team) => team._id === selectedTeam)) {
+      setSelectedTeam(teams[0]._id);
+    }
+  }, [scope, teams, selectedTeam]);
+
+  useEffect(() => {
+    if (scope === "project") {
+      if (projects.length > 0 && !projects.some((project) => project._id === selectedProject)) {
+        setSelectedProject(projects[0]._id);
+      }
+      if (projects.length === 0) setSelectedProject("");
+    }
+  }, [scope, projects, selectedProject]);
+
+  const analyticsParams = useMemo(() => {
+    if (scope === "team") return selectedTeam ? { scope, teamId: selectedTeam } : null;
+    if (scope === "project") return selectedProject ? { scope, projectId: selectedProject } : null;
+    return { scope: "my" };
+  }, [scope, selectedTeam, selectedProject]);
+
   const query = useQuery({
-    queryKey: ["analytics-page"],
-    queryFn: () => fetchAnalyticsApi({}),
+    queryKey: ["analytics-page", analyticsParams],
+    queryFn: () => fetchAnalyticsApi(analyticsParams),
+    enabled: Boolean(analyticsParams),
   });
 
-  if (query.isLoading) return <LoadingState label="Loading analytics" />;
+  if (!analyticsParams) {
+    return (
+      <div className="space-y-4">
+        <AnalyticsScopeBar
+          scope={scope}
+          onScopeChange={setScope}
+          teams={teams}
+          projects={projects}
+          selectedTeam={selectedTeam}
+          onTeamChange={setSelectedTeam}
+          selectedProject={selectedProject}
+          onProjectChange={setSelectedProject}
+          helperText="Analytics defaults to project scope so charts do not silently mix unrelated projects."
+        />
+        <EmptyState
+          title={scope === "team" ? "Select a team" : "Select a project"}
+          description={scope === "team" ? "Choose a team to load team analytics." : "Choose a project to load project analytics."}
+        />
+      </div>
+    );
+  }
+
+  if ((teamsQuery.isLoading && scope !== "my") || query.isLoading) return <LoadingState label="Loading analytics" />;
   if (query.isError) return <p className="card p-4 text-sm text-slate-500">Analytics unavailable.</p>;
 
   const data = query.data;
+  const scopeLabel = data.scopeContext?.label || "Project Analytics";
   const pieColors = ["#0f766e", "#22c55e", "#f59e0b", "#ef4444"];
 
   return (
     <div className="space-y-4">
+      <AnalyticsScopeBar
+        scope={scope}
+        onScopeChange={setScope}
+        teams={teams}
+        projects={projects}
+        selectedTeam={selectedTeam}
+        onTeamChange={setSelectedTeam}
+        selectedProject={selectedProject}
+        onProjectChange={setSelectedProject}
+        helperText="Analytics defaults to project scope so charts do not silently mix unrelated projects."
+      />
+
       <section className="grid gap-4 lg:grid-cols-3">
         {data.sprintHealth.slice(0, 3).map((sprint) => (
           <div key={sprint.sprintId} className="card p-4">
@@ -55,7 +132,7 @@ const AnalyticsPage = () => {
       </section>
 
       <section className="card p-4">
-        <h2 className="text-lg font-semibold">Completion trends (7 days)</h2>
+        <h2 className="text-lg font-semibold">{scopeLabel} completion trends (7 days)</h2>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data.completionTrends}>
@@ -71,7 +148,7 @@ const AnalyticsPage = () => {
 
       <section className="grid gap-4 lg:grid-cols-2">
         <div className="card p-4">
-          <h2 className="text-lg font-semibold">Workload distribution</h2>
+          <h2 className="text-lg font-semibold">{scopeLabel} workload distribution</h2>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data.workloadDistribution}>
@@ -88,7 +165,7 @@ const AnalyticsPage = () => {
         </div>
 
         <div className="card p-4">
-          <h2 className="text-lg font-semibold">Priority distribution</h2>
+          <h2 className="text-lg font-semibold">{scopeLabel} priority distribution</h2>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -105,7 +182,7 @@ const AnalyticsPage = () => {
       </section>
 
       <section className="card p-4">
-        <h2 className="text-lg font-semibold">Sprint health table</h2>
+        <h2 className="text-lg font-semibold">{scopeLabel} sprint health table</h2>
         <div className="mt-3 overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>

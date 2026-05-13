@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { chatWithFonAiApi } from "../../api/aiApi";
+import { normalizeApiError } from "../../utils/apiError";
 
 const STORAGE_KEY = "task_sphere_fon_ai_chat";
 
@@ -52,9 +53,8 @@ const FonAiChat = () => {
       setMessages((current) => [...current, { role: "assistant", content: data.reply }]);
     },
     onError: (error) => {
-      const message =
-        error?.response?.data?.message ||
-        "FON AI is unavailable right now. Check Gemini configuration or try again.";
+      const parsed = normalizeApiError(error, "FON AI is unavailable right now.");
+      const message = parsed.summary;
       setMessages((current) => [...current, { role: "assistant", content: message }]);
     },
   });

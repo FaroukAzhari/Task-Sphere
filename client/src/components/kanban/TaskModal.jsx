@@ -84,6 +84,7 @@ const TaskModal = ({ taskId, onClose }) => {
               />
               <Badge text={task.taskType || "Task"} tone="default" />
               {task.taskType === "Story" && task.storyPoints ? <Badge text={`${task.storyPoints} story points`} tone="medium" /> : null}
+              {task.sprint ? <Badge text="Counts in sprint" tone="low" /> : <Badge text="Outside sprint scope" tone="default" />}
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -186,6 +187,14 @@ const TaskModal = ({ taskId, onClose }) => {
                     className="rounded-xl border border-slate-300 px-3 py-2"
                     onChange={(e) => updateMutation.mutate({ taskId: task._id, payload: { dueDate: e.target.value || null } })}
                   />
+                </div>
+                <div className="mt-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/80 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Sprint scope</p>
+                  <p className="mt-1 text-sm text-slate-700">
+                    {task.sprint
+                      ? "This work item is allocated to a sprint and contributes to sprint burndown."
+                      : "This work item is not allocated to a sprint. It remains visible on the board, but does not affect sprint burndown."}
+                  </p>
                 </div>
               </div>
             </div>
