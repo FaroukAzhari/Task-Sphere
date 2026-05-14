@@ -13,10 +13,11 @@ const TaskCard = ({ task, onOpen, sprintContext = null }) => {
       }
     : undefined;
 
+  const taskSprintId = typeof task.sprint === "string" ? task.sprint : task.sprint?._id;
   const isInSelectedSprint = Boolean(
     sprintContext?.selectedSprintId &&
-    task.sprint &&
-    String(task.sprint) === String(sprintContext.selectedSprintId)
+    taskSprintId &&
+    String(taskSprintId) === String(sprintContext.selectedSprintId)
   );
   const hasActiveSprint = Boolean(sprintContext?.isActive);
 
